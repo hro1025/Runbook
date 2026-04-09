@@ -9,6 +9,8 @@ public class CatppuccinMacchiato : ITheme
     private readonly Color _base = new(36, 39, 58); // #24273a
     private readonly Color _surface0 = new(54, 58, 79); // #363a4f
     private readonly Color _blue = new(138, 173, 244); // #8aadf4
+    private readonly Color _overlay1 = new(110, 115, 141); // #6e738d
+    private readonly Color _mantle = new(30, 32, 48); // #1e2030
 
     public ColorScheme Main()
     {
@@ -27,6 +29,19 @@ public class CatppuccinMacchiato : ITheme
     public ColorScheme StatusBar()
     {
         var attr = new Terminal.Gui.Attribute(_text, _surface0);
+
+        return new ColorScheme()
+        {
+            Normal = attr,
+            Focus = attr,
+            HotNormal = attr,
+            HotFocus = attr,
+        };
+    }
+
+    public ColorScheme NumberBar()
+    {
+        var attr = new Terminal.Gui.Attribute(_overlay1, _mantle);
 
         return new ColorScheme()
         {

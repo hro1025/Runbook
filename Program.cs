@@ -34,7 +34,7 @@ static class Program
         };
         dashboard.ListView.SelectedItemChanged += (sender, e) =>
         {
-            if (e.Item >= 1 && e.Item < scripts.Count)
+            if (e.Item >= 0 && e.Item < scripts.Count)
             {
                 var selected = scripts[e.Item];
                 var lines = File.ReadAllLines(selected.Path!);
@@ -46,9 +46,8 @@ static class Program
                 }
                 dashboard.TextView.Text = string.Join("\n", numbers);
             }
-
-            Application.Run(dashboard.Window);
-            Application.Shutdown();
         };
+        Application.Run(dashboard.Window);
+        Application.Shutdown();
     }
 }

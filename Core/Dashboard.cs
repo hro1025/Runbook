@@ -45,6 +45,8 @@ public class Dashboard
             CanFocus = false,
         };
 
+        var sideMenu = new Label { };
+
         var sidebar = new FrameView()
         {
             Title = "Scripts",
