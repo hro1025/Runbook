@@ -1,14 +1,17 @@
+using Runbook.Interfaces;
 using Terminal.Gui;
 
 namespace Runbook.Core;
 
 public class Dashboard
 {
+    private const string V = ", ";
+
     public Window Window { get; }
     public ListView ListView { get; }
     public TextView TextView { get; }
 
-    public Dashboard(List<string> displayNames, ColorScheme colorScheme)
+    public Dashboard(List<string> displayNames, ITheme theme)
     {
         Window = new Window
         {
@@ -17,21 +20,14 @@ public class Dashboard
             Y = 0,
             Width = Dim.Fill(),
             Height = Dim.Fill(),
-            ColorScheme = colorScheme,
-        };
-
-        var titleLabel = new Label()
-        {
-            Text = "╔══════════ Runbook ══════════╗",
-            X = Pos.Center(),
-            Y = 0,
-            CanFocus = false,
+            BorderStyle = LineStyle.None,
+            ColorScheme = theme.Main(),
         };
 
         ListView = new ListView()
         {
             X = 0,
-            Y = 1,
+            Y = 0,
             Width = Dim.Fill(),
             Height = Dim.Fill(),
         };
@@ -42,7 +38,7 @@ public class Dashboard
         TextView = new TextView()
         {
             X = 0,
-            Y = 1,
+            Y = 0,
             Width = Dim.Fill(),
             Height = Dim.Fill(),
             ReadOnly = true,
@@ -53,7 +49,7 @@ public class Dashboard
         {
             Title = "Scripts",
             X = 0,
-            Y = 1,
+            Y = 0,
             Width = Dim.Percent(25),
             Height = Dim.Fill(1),
         };
@@ -62,24 +58,25 @@ public class Dashboard
         {
             Title = "Preview",
             X = Pos.Right(sidebar),
-            Y = 1,
+            Y = 0,
             Width = Dim.Fill(),
             Height = Dim.Fill(1),
             CanFocus = false,
         };
 
-        var quitBtn = new Button()
+        var statusBar = new Label
         {
-            Text = "Quit",
-            X = Pos.AnchorEnd(9),
+            Text = " Esc: Quit | Enter: Run | /: Search | Tab: Switch",
+            X = 0,
             Y = Pos.AnchorEnd(1),
+            Width = Dim.Fill(),
+            CanFocus = false,
+            ColorScheme = theme.Main(),
         };
-
-        quitBtn.Accepting += (sender, e) => Application.RequestStop();
 
         sidebar.Add(ListView);
         detail.Add(TextView);
-        Window.Add(titleLabel, sidebar, detail, quitBtn);
+        Window.Add(sidebar, detail, statusBar);
 
         Window.KeyDown += (sender, e) =>
         {
