@@ -51,4 +51,18 @@ public class CatppuccinMacchiato : ITheme
             HotFocus = attr,
         };
     }
+
+    public ColorScheme Sidebar()
+    {
+        var normal = new Terminal.Gui.Attribute(_text, _base);
+        var focus = new Terminal.Gui.Attribute(_text, _surface0);
+
+        return new ColorScheme()
+        {
+            Normal = normal,
+            Focus = focus,
+            HotNormal = normal,
+            HotFocus = focus,
+        };
+    }
 }

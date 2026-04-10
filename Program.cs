@@ -24,13 +24,13 @@ static class Program
         Colors.ColorSchemes["Dialog"] = theme.Main();
         Colors.ColorSchemes["Base"] = theme.Main();
 
-        var displayNames = scripts.ConvertAll(s => $"{s.Name} - {s.Type}");
+        var displayNames = scripts.ConvertAll(s => $"{s.Name, -30}{s.Type}");
         var dashboard = new Dashboard(displayNames, theme);
 
         dashboard.ListView.OpenSelectedItem += (sender, e) =>
         {
             var selected = scripts[dashboard.ListView.SelectedItem];
-            MessageBox.Query("Selected", $"Run: {selected.Name}?", " ", "No", "Yes");
+            MessageBox.Query("", $"Run: {selected.Name}?\n", "No", "Yes");
         };
         dashboard.ListView.SelectedItemChanged += (sender, e) =>
         {
@@ -38,13 +38,15 @@ static class Program
             {
                 var selected = scripts[e.Item];
                 var lines = File.ReadAllLines(selected.Path!);
-                var numbers = new string[lines.Length];
 
+                var numbers = new string[lines.Length];
                 for (int i = 0; i < lines.Length; i++)
                 {
-                    numbers[i] = $"{i + 1} {lines[i]}";
+                    numbers[i] = (i + 1).ToString().PadLeft(4);
                 }
-                dashboard.TextView.Text = string.Join("\n", numbers);
+
+                dashboard.LineNumbers.Text = string.Join("\n", numbers);
+                dashboard.TextView.Text = string.Join("\n", lines);
             }
         };
         Application.Run(dashboard.Window);

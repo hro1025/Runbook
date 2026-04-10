@@ -10,6 +10,7 @@ public class Dashboard
     public Window Window { get; }
     public ListView ListView { get; }
     public TextView TextView { get; }
+    public Label LineNumbers { get; }
 
     public Dashboard(List<string> displayNames, ITheme theme)
     {
@@ -30,14 +31,24 @@ public class Dashboard
             Y = 0,
             Width = Dim.Fill(),
             Height = Dim.Fill(),
+            ColorScheme = theme.Sidebar(),
         };
         ListView.SetSource(
             new System.Collections.ObjectModel.ObservableCollection<string>(displayNames)
         );
+        LineNumbers = new Label
+        {
+            X = 0,
+            Y = 0,
+            Width = 5,
+            Height = Dim.Fill(),
+            CanFocus = false,
+            ColorScheme = theme.NumberBar(),
+        };
 
         TextView = new TextView()
         {
-            X = 0,
+            X = 5,
             Y = 0,
             Width = Dim.Fill(),
             Height = Dim.Fill(),
@@ -45,14 +56,13 @@ public class Dashboard
             CanFocus = false,
         };
 
-        var sideMenu = new Label { };
-
         var sidebar = new FrameView()
         {
             Title = "Scripts",
             X = 0,
             Y = 0,
-            Width = Dim.Percent(25),
+            BorderStyle = LineStyle.Rounded,
+            Width = Dim.Percent(30),
             Height = Dim.Fill(1),
         };
 
@@ -61,6 +71,7 @@ public class Dashboard
             Title = "Preview",
             X = Pos.Right(sidebar),
             Y = 0,
+            BorderStyle = LineStyle.Rounded,
             Width = Dim.Fill(),
             Height = Dim.Fill(1),
             CanFocus = false,
@@ -73,11 +84,11 @@ public class Dashboard
             Y = Pos.AnchorEnd(1),
             Width = Dim.Fill(),
             CanFocus = false,
-            ColorScheme = theme.Main(),
+            ColorScheme = theme.StatusBar(),
         };
 
         sidebar.Add(ListView);
-        detail.Add(TextView);
+        detail.Add(LineNumbers, TextView);
         Window.Add(sidebar, detail, statusBar);
 
         Window.KeyDown += (sender, e) =>
