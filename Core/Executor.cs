@@ -14,5 +14,16 @@ public class Executor : IExecutor
             ScriptType.CSharp => "dotnet-script",
             _ => throw new NotSupportedException($"Unknown script type: {script.Type}"),
         };
+        var process = new Process();
+        process.StartInfo.FileName = execute;
+        process.StartInfo.Arguments = script.Path;
+        process.StartInfo.RedirectStandardOutput = true;
+        process.StartInfo.UseShellExecute = false;
+
+        process.Start();
+        var output = process.StandardOutput.ReadToEnd();
+        process.WaitForExit();
+
+        return output;
     }
 }

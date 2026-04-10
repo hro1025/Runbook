@@ -1,6 +1,7 @@
 ﻿using Runbook.Core;
 using Runbook.Interfaces;
 using Runbook.Themes;
+using Runbook.UI;
 using Terminal.Gui;
 
 namespace Runbook;
@@ -19,18 +20,24 @@ static class Program
         var scripts = scanner.Scan(fullPath);
 
         Application.Init();
-
         ITheme theme = new CatppuccinMacchiato();
+        var confirmDialog = new ConfirmationDialog(theme);
+        IExecutor executor = new Executor();
+
         Colors.ColorSchemes["Dialog"] = theme.Main();
         Colors.ColorSchemes["Base"] = theme.Main();
 
         var displayNames = scripts.ConvertAll(s => $"{s.Name, -30}{s.Type}");
-        var dashboard = new Dashboard(displayNames, theme);
+        var dashboard = new Dashboard(displayNames, theme, confirmDialog);
 
         dashboard.ListView.OpenSelectedItem += (sender, e) =>
         {
             var selected = scripts[dashboard.ListView.SelectedItem];
-            MessageBox.Query("", $"Run: {selected.Name}?\n", "No", "Yes");
+            var confirmed = confirmDialog.Show("Run Script", $"Run {selected.Name}?");
+            if (confirmed)
+            {
+                dashboard.TextView.Text = executor.Execute(selected);
+            }
         };
         dashboard.ListView.SelectedItemChanged += (sender, e) =>
         {

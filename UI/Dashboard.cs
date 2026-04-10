@@ -1,18 +1,16 @@
 using Runbook.Interfaces;
 using Terminal.Gui;
 
-namespace Runbook.Core;
+namespace Runbook.UI;
 
 public class Dashboard
 {
-    private const string V = ", ";
-
     public Window Window { get; }
     public ListView ListView { get; }
     public TextView TextView { get; }
     public Label LineNumbers { get; }
 
-    public Dashboard(List<string> displayNames, ITheme theme)
+    public Dashboard(List<string> displayNames, ITheme theme, ConfirmationDialog confirmDialog)
     {
         Window = new Window
         {
@@ -95,7 +93,11 @@ public class Dashboard
         {
             if (e.KeyCode == KeyCode.Esc)
             {
-                Application.RequestStop();
+                var quit = confirmDialog.Show("Quit", "Exit Runbook?");
+                if (quit)
+                {
+                    Application.RequestStop();
+                }
                 e.Handled = true;
             }
         };
