@@ -8,6 +8,7 @@ public class Dashboard
     public Window Window { get; }
     public ListView ListView { get; }
     public TextView TextView { get; }
+    public TextView Output { get; }
     public Label LineNumbers { get; }
 
     public Dashboard(List<string> displayNames, ITheme theme, ConfirmationDialog confirmDialog)
@@ -44,6 +45,17 @@ public class Dashboard
             ColorScheme = theme.NumberBar(),
         };
 
+        Output = new TextView()
+        {
+            X = 0,
+            Y = 0,
+            Width = Dim.Fill(),
+            Height = Dim.Fill(),
+            ReadOnly = true,
+            CanFocus = false,
+            ColorScheme = theme.Main(),
+        };
+
         TextView = new TextView()
         {
             X = 5,
@@ -60,19 +72,28 @@ public class Dashboard
             X = 0,
             Y = 0,
             BorderStyle = LineStyle.Rounded,
-            Width = Dim.Percent(30),
+            Width = Dim.Percent(15),
             Height = Dim.Fill(1),
         };
 
-        var detail = new FrameView()
+        var preview = new FrameView()
         {
             Title = "Preview",
             X = Pos.Right(sidebar),
             Y = 0,
             BorderStyle = LineStyle.Rounded,
+            Width = Dim.Fill(80),
+            Height = Dim.Fill(1),
+        };
+
+        var output = new FrameView()
+        {
+            Title = "Output",
+            X = Pos.Right(preview),
+            Y = 0,
+            BorderStyle = LineStyle.Rounded,
             Width = Dim.Fill(),
             Height = Dim.Fill(1),
-            CanFocus = false,
         };
 
         var statusBar = new Label
@@ -81,13 +102,13 @@ public class Dashboard
             X = 0,
             Y = Pos.AnchorEnd(1),
             Width = Dim.Fill(),
-            CanFocus = false,
             ColorScheme = theme.StatusBar(),
         };
 
         sidebar.Add(ListView);
-        detail.Add(LineNumbers, TextView);
-        Window.Add(sidebar, detail, statusBar);
+        preview.Add(LineNumbers, TextView);
+        output.Add(Output);
+        Window.Add(sidebar, preview, output, statusBar);
 
         Window.KeyDown += (sender, e) =>
         {

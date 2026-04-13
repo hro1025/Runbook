@@ -30,15 +30,6 @@ static class Program
         var displayNames = scripts.ConvertAll(s => $"{s.Name, -30}{s.Type}");
         var dashboard = new Dashboard(displayNames, theme, confirmDialog);
 
-        dashboard.ListView.OpenSelectedItem += (sender, e) =>
-        {
-            var selected = scripts[dashboard.ListView.SelectedItem];
-            var confirmed = confirmDialog.Show("Run Script", $"Run {selected.Name}?");
-            if (confirmed)
-            {
-                dashboard.TextView.Text = executor.Execute(selected);
-            }
-        };
         dashboard.ListView.SelectedItemChanged += (sender, e) =>
         {
             if (e.Item >= 0 && e.Item < scripts.Count)
@@ -54,6 +45,16 @@ static class Program
 
                 dashboard.LineNumbers.Text = string.Join("\n", numbers);
                 dashboard.TextView.Text = string.Join("\n", lines);
+            }
+        };
+
+        dashboard.ListView.OpenSelectedItem += (sender, e) =>
+        {
+            var selected = scripts[dashboard.ListView.SelectedItem];
+            var confirmed = confirmDialog.Show("Run Script", $"Run {selected.Name}?");
+            if (confirmed)
+            {
+                dashboard.Output.Text = executor.Execute(selected);
             }
         };
         Application.Run(dashboard.Window);

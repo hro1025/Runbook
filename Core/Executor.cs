@@ -18,12 +18,14 @@ public class Executor : IExecutor
         process.StartInfo.FileName = execute;
         process.StartInfo.Arguments = script.Path;
         process.StartInfo.RedirectStandardOutput = true;
+        process.StartInfo.RedirectStandardError = true;
         process.StartInfo.UseShellExecute = false;
-
         process.Start();
-        var output = process.StandardOutput.ReadToEnd();
-        process.WaitForExit();
 
-        return output;
+        var output = process.StandardOutput.ReadToEndAsync();
+        var errorOutput = process.StandardError.ReadToEndAsync();
+        Task.WaitAll(output, errorOutput);
+
+        return output.Result + errorOutput.Result;
     }
 }
