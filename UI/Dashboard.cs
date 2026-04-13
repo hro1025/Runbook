@@ -52,7 +52,7 @@ public class Dashboard
             Width = Dim.Fill(),
             Height = Dim.Fill(),
             ReadOnly = true,
-            CanFocus = false,
+            CanFocus = true,
             ColorScheme = theme.Main(),
         };
 
@@ -63,7 +63,7 @@ public class Dashboard
             Width = Dim.Fill(),
             Height = Dim.Fill(),
             ReadOnly = true,
-            CanFocus = false,
+            CanFocus = true,
         };
 
         var sidebar = new FrameView()
