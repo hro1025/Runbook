@@ -82,6 +82,7 @@ public class Dashboard
             X = Pos.Right(sidebar),
             Y = 0,
             BorderStyle = LineStyle.Rounded,
+
             Width = Dim.Fill(80),
             Height = Dim.Fill(1),
         };
@@ -114,15 +115,15 @@ public class Dashboard
         {
             if (e.KeyCode == KeyCode.Esc)
             {
-                var quit = confirmDialog.Show("Quit", "Exit Runbook?");
-                if (quit)
+                var confirmed = confirmDialog.Show("Quit", "Exit Runbook?");
+                if (confirmed)
                 {
                     Application.RequestStop();
                 }
                 e.Handled = true;
             }
-        };
 
-        ListView.SetFocus();
+            ListView.SetFocus();
+        };
     }
 }

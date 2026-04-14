@@ -51,12 +51,13 @@ static class Program
         dashboard.ListView.OpenSelectedItem += (sender, e) =>
         {
             var selected = scripts[dashboard.ListView.SelectedItem];
-            var confirmed = confirmDialog.Show("Run Script", $"Run {selected.Name}?");
-            if (confirmed)
+            var run = confirmDialog.Show("Run Script", $"Run {selected.Name}?");
+            if (run)
             {
                 dashboard.Output.Text = executor.Execute(selected);
             }
         };
+
         Application.Run(dashboard.Window);
         Application.Shutdown();
     }

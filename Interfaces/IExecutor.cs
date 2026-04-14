@@ -5,4 +5,6 @@ namespace Runbook.Interfaces;
 public interface IExecutor
 {
     public string Execute(Script script);
+
+    public void OpenProgram(string filePath);
 }
