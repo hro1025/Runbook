@@ -28,7 +28,7 @@ static class Program
         Colors.ColorSchemes["Base"] = theme.Main();
 
         var displayNames = scripts.ConvertAll(s => $"{s.Name}");
-        var dashboard = new Dashboard(displayNames, theme, confirmDialog);
+        var dashboard = new Dashboard(scripts, displayNames, theme, confirmDialog, executor);
 
         dashboard.ListView.SelectedItemChanged += (sender, e) =>
         {

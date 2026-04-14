@@ -1,4 +1,6 @@
+using Runbook.Core;
 using Runbook.Interfaces;
+using Runbook.Models;
 using Terminal.Gui;
 
 namespace Runbook.UI;
@@ -11,7 +13,13 @@ public class Dashboard
     public TextView Output { get; }
     public Label LineNumbers { get; }
 
-    public Dashboard(List<string> displayNames, ITheme theme, ConfirmationDialog confirmDialog)
+    public Dashboard(
+        List<Script> scripts,
+        List<string> displayNames,
+        ITheme theme,
+        ConfirmationDialog confirmDialog,
+        IExecutor iexecutor
+    )
     {
         Window = new Window
         {
@@ -121,6 +129,18 @@ public class Dashboard
                     Application.RequestStop();
                 }
                 e.Handled = true;
+            }
+            if (e.KeyCode == KeyCode.E)
+            {
+                {
+                    var confirmed = confirmDialog.Show("Edit", "Edit the script?");
+                    if (confirmed)
+                    {
+                        iexecutor.OpenProgram(scripts[ListView.SelectedItem].Path!);
+                    }
+
+                    e.Handled = true;
+                }
             }
 
             ListView.SetFocus();
