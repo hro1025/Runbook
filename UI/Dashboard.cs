@@ -171,7 +171,7 @@ public class Dashboard
         };
         Application.KeyDown += (sender, e) =>
         {
-            if (e.KeyCode == KeyCode.E && ListView.HasFocus)
+            if (e.KeyCode == KeyCode.E)
             {
                 var confirmed = confirmationDialog.Show("Edit", "Edit the script?");
                 if (confirmed)
