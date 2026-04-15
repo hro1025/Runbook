@@ -167,6 +167,7 @@ public class Dashboard
                 {
                     Application.RequestStop();
                 }
+                e.Handled = true;
             }
         };
         Application.KeyDown += (sender, e) =>
