@@ -28,11 +28,4 @@ public class Executor : IExecutor
 
         return output.Result + errorOutput.Result;
     }
-
-    public void OpenProgram(string filePath)
-    {
-        var startInfo = new ProcessStartInfo(filePath) { UseShellExecute = true, Verb = "open" };
-
-        Process.Start(startInfo);
-    }
 }

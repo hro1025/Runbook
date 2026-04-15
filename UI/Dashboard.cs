@@ -1,5 +1,4 @@
 using Runbook.Interfaces;
-using Runbook.Models;
 using Terminal.Gui;
 
 namespace Runbook.UI;
@@ -12,20 +11,8 @@ public class Dashboard
     public TextView Output { get; }
     public Label LineNumbers { get; }
 
-    private readonly List<Script> scripts;
-    private readonly IExecutor executor;
-
-    public Dashboard(
-        List<Script> scripts,
-        List<string> displayNames,
-        ITheme theme,
-        ConfirmationDialog confirmDialog,
-        IExecutor executor
-    )
+    public Dashboard(List<string> displayNames, ITheme theme, ConfirmationDialog confirmationDialog)
     {
-        this.scripts = scripts;
-        this.executor = executor;
-
         Window = new Window
         {
             Title = "",
@@ -95,7 +82,6 @@ public class Dashboard
             X = Pos.Right(sidebar),
             Y = 0,
             BorderStyle = LineStyle.Rounded,
-
             Width = Dim.Fill(80),
             Height = Dim.Fill(1),
         };
@@ -112,7 +98,7 @@ public class Dashboard
 
         var statusBar = new Label
         {
-            Text = " Esc: Quit | Enter: Run | /: Search | Tab: Switch",
+            Text = " Esc: Quit | Enter: Run | Tab: Switch",
             X = 0,
             Y = Pos.AnchorEnd(1),
             Width = Dim.Fill(),
@@ -128,25 +114,15 @@ public class Dashboard
         {
             if (e.KeyCode == KeyCode.Esc)
             {
-                var confirmed = confirmDialog.Show("Quit", "Exit Runbook?");
+                var confirmed = confirmationDialog.Show("Quit", "Exit Runbook?");
                 if (confirmed)
                 {
                     Application.RequestStop();
                 }
                 e.Handled = true;
             }
-            if (e.KeyCode == KeyCode.E)
-            {
-                var selected = scripts[ListView.SelectedItem];
-                var confirmed = confirmDialog.Show("Edit", "Edit the script?");
-                if (confirmed)
-                {
-                    executor.OpenProgram(selected.Path!);
-                }
-                e.Handled = true;
-            }
-
-            ListView.SetFocus();
+            if (e.KeyCode == KeyCode.E) { }
         };
+        ListView.SetFocus();
     }
 }
