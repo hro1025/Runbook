@@ -28,35 +28,7 @@ static class Program
         Colors.ColorSchemes["Base"] = theme.Main();
 
         var displayNames = scripts.ConvertAll(s => $"{s.Name}");
-        var dashboard = new Dashboard(displayNames, theme, confirmDialog);
-
-        dashboard.ListView.SelectedItemChanged += (sender, e) =>
-        {
-            if (e.Item >= 0 && e.Item < scripts.Count)
-            {
-                var selected = scripts[e.Item];
-                var lines = File.ReadAllLines(selected.Path!);
-
-                var numbers = new string[lines.Length];
-                for (int i = 0; i < lines.Length; i++)
-                {
-                    numbers[i] = (i + 1).ToString().PadLeft(4);
-                }
-
-                dashboard.LineNumbers.Text = string.Join("\n", numbers);
-                dashboard.TextView.Text = string.Join("\n", lines);
-            }
-        };
-
-        dashboard.ListView.OpenSelectedItem += (sender, e) =>
-        {
-            var selected = scripts[dashboard.ListView.SelectedItem];
-            var run = confirmDialog.Show("Run Script", $"Run {selected.Name}?");
-            if (run)
-            {
-                dashboard.Output.Text = executor.Execute(selected);
-            }
-        };
+        var dashboard = new Dashboard(scripts, displayNames, theme, confirmDialog, executor);
 
         Application.Run(dashboard.Window);
         Application.Shutdown();

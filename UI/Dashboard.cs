@@ -1,4 +1,5 @@
 using Runbook.Interfaces;
+using Runbook.Models;
 using Terminal.Gui;
 
 namespace Runbook.UI;
@@ -10,8 +11,16 @@ public class Dashboard
     public TextView TextView { get; }
     public TextView Output { get; }
     public Label LineNumbers { get; }
+    public Label StatusBar { get; }
+    public Label EditBar { get; }
 
-    public Dashboard(List<string> displayNames, ITheme theme, ConfirmationDialog confirmationDialog)
+    public Dashboard(
+        List<Script> scripts,
+        List<string> displayNames,
+        ITheme theme,
+        ConfirmationDialog confirmationDialog,
+        IExecutor executor
+    )
     {
         Window = new Window
         {
@@ -35,6 +44,7 @@ public class Dashboard
         ListView.SetSource(
             new System.Collections.ObjectModel.ObservableCollection<string>(displayNames)
         );
+
         LineNumbers = new Label
         {
             X = 0,
@@ -64,6 +74,25 @@ public class Dashboard
             Height = Dim.Fill(),
             ReadOnly = true,
             CanFocus = true,
+        };
+        StatusBar = new Label()
+        {
+            Text = " Esc: Quit | Enter: Run | E: Edit",
+            X = 0,
+            Y = Pos.AnchorEnd(1),
+            Width = Dim.Fill(),
+            ColorScheme = theme.StatusBar(),
+        };
+
+        EditBar = new Label
+        {
+            Text = " EDITING | Ctrl+S: Save | Esc: Cancel ",
+            TextAlignment = Alignment.Center,
+            X = Pos.Center(),
+            Y = Pos.AnchorEnd(1),
+            Width = Dim.Fill(),
+            ColorScheme = theme.StatusBar(),
+            Visible = false,
         };
 
         var sidebar = new FrameView()
@@ -96,19 +125,38 @@ public class Dashboard
             Height = Dim.Fill(1),
         };
 
-        var statusBar = new Label
+        ListView.SelectedItemChanged += (sender, e) =>
         {
-            Text = " Esc: Quit | Enter: Run | Tab: Switch",
-            X = 0,
-            Y = Pos.AnchorEnd(1),
-            Width = Dim.Fill(),
-            ColorScheme = theme.StatusBar(),
+            if (e.Item >= 0 && e.Item < scripts.Count)
+            {
+                var selected = scripts[e.Item];
+                var lines = File.ReadAllLines(selected.Path!);
+                var numbers = new string[lines.Length];
+                for (int i = 0; i < lines.Length; i++)
+                {
+                    numbers[i] = (i + 1).ToString().PadLeft(4);
+                }
+                LineNumbers.Text = string.Join("\n", numbers);
+                TextView.Text = string.Join("\n", lines);
+            }
+        };
+        ListView.SelectedItem = 1;
+        ListView.SelectedItem = 0;
+
+        ListView.OpenSelectedItem += (sender, e) =>
+        {
+            var selected = scripts[ListView.SelectedItem];
+            var run = confirmationDialog.Show("Run Script", $"Run {selected.Name}?");
+            if (run)
+            {
+                Output.Text = executor.Execute(selected);
+            }
         };
 
         sidebar.Add(ListView);
-        preview.Add(LineNumbers, TextView);
+        preview.Add(LineNumbers, TextView, EditBar);
         output.Add(Output);
-        Window.Add(sidebar, preview, output, statusBar);
+        Window.Add(sidebar, preview, output, StatusBar);
 
         Window.KeyDown += (sender, e) =>
         {
@@ -119,10 +167,21 @@ public class Dashboard
                 {
                     Application.RequestStop();
                 }
-                e.Handled = true;
             }
-            if (e.KeyCode == KeyCode.E) { }
         };
-        ListView.SetFocus();
+        ListView.KeyDown += (sender, e) =>
+        {
+            if (e.KeyCode == KeyCode.E)
+            {
+                var confirmed = confirmationDialog.Show("Edit", "Edit the script?");
+                if (confirmed)
+                {
+                    EditBar.Visible = true;
+                    TextView.ReadOnly = false;
+                    TextView.SetFocus();
+                    e.Handled = true;
+                }
+            }
+        };
     }
 }
