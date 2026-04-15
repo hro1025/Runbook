@@ -169,9 +169,9 @@ public class Dashboard
                 }
             }
         };
-        ListView.KeyDown += (sender, e) =>
+        Application.KeyDown += (sender, e) =>
         {
-            if (e.KeyCode == KeyCode.E)
+            if (e.KeyCode == KeyCode.E && ListView.HasFocus)
             {
                 var confirmed = confirmationDialog.Show("Edit", "Edit the script?");
                 if (confirmed)
@@ -179,8 +179,8 @@ public class Dashboard
                     EditBar.Visible = true;
                     TextView.ReadOnly = false;
                     TextView.SetFocus();
-                    e.Handled = true;
                 }
+                e.Handled = true;
             }
         };
     }
