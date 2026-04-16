@@ -12,7 +12,8 @@ public class Dashboard
     public TextView Output { get; }
     public Label LineNumbers { get; }
     public Label StatusBar { get; }
-    public Label EditBar { get; }
+    public Label EditBarEditing { get; }
+    public Label EditBarSaved { get; }
 
     public Dashboard(
         List<Script> scripts,
@@ -39,7 +40,7 @@ public class Dashboard
             Y = 0,
             Width = Dim.Fill(),
             Height = Dim.Fill(),
-            ColorScheme = theme.Sidebar(),
+            ColorScheme = theme.SideBar(),
         };
         ListView.SetSource(
             new System.Collections.ObjectModel.ObservableCollection<string>(displayNames)
@@ -84,14 +85,22 @@ public class Dashboard
             ColorScheme = theme.StatusBar(),
         };
 
-        EditBar = new Label
+        EditBarEditing = new Label
         {
             Text = " EDITING | Ctrl+S: Save | Esc: Cancel ",
-            TextAlignment = Alignment.Center,
-            X = Pos.Center(),
+            X = 0,
             Y = Pos.AnchorEnd(1),
             Width = Dim.Fill(),
-            ColorScheme = theme.StatusBar(),
+            ColorScheme = theme.EditBarEditing(),
+            Visible = false,
+        };
+        EditBarSaved = new Label
+        {
+            Text = " EDITING | Ctrl+S: Save | Esc: Cancel ",
+            X = 0,
+            Y = Pos.AnchorEnd(1),
+            Width = Dim.Fill(),
+            ColorScheme = theme.EditBarSaved(),
             Visible = false,
         };
 
@@ -154,35 +163,8 @@ public class Dashboard
         };
 
         sidebar.Add(ListView);
-        preview.Add(LineNumbers, TextView, EditBar);
+        preview.Add(LineNumbers, TextView);
         output.Add(Output);
-        Window.Add(sidebar, preview, output, StatusBar);
-
-        Window.KeyDown += (sender, e) =>
-        {
-            if (e.KeyCode == KeyCode.Esc)
-            {
-                var confirmed = confirmationDialog.Show("Quit", "Exit Runbook?");
-                if (confirmed)
-                {
-                    Application.RequestStop();
-                }
-                e.Handled = true;
-            }
-        };
-        Application.KeyDown += (sender, e) =>
-        {
-            if (e.KeyCode == KeyCode.E)
-            {
-                var confirmed = confirmationDialog.Show("Edit", "Edit the script?");
-                if (confirmed)
-                {
-                    EditBar.Visible = true;
-                    TextView.ReadOnly = false;
-                    TextView.SetFocus();
-                }
-                e.Handled = true;
-            }
-        };
+        Window.Add(sidebar, preview, output, StatusBar, EditBarEditing, EditBarSaved);
     }
 }

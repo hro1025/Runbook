@@ -27,7 +27,7 @@ public class ConfirmationDialog(ITheme theme)
             X = Pos.Center(),
             Y = 1,
             ShadowStyle = ShadowStyle.None,
-            ColorScheme = theme.Sidebar(),
+            ColorScheme = theme.SideBar(),
         };
 
         var yesBtn = new Button()
@@ -36,7 +36,7 @@ public class ConfirmationDialog(ITheme theme)
             X = Pos.Center() - 6,
             Y = 3,
             ShadowStyle = ShadowStyle.None,
-            ColorScheme = theme.Sidebar(),
+            ColorScheme = theme.SideBar(),
         };
 
         var noBtn = new Button()
@@ -45,7 +45,7 @@ public class ConfirmationDialog(ITheme theme)
             X = Pos.Center() + 4,
             Y = 3,
             ShadowStyle = ShadowStyle.None,
-            ColorScheme = theme.Sidebar(),
+            ColorScheme = theme.SideBar(),
         };
 
         yesBtn.Accepting += (sender, e) =>

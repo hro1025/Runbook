@@ -52,7 +52,7 @@ public class CatppuccinMacchiato : ITheme
         };
     }
 
-    public ColorScheme Sidebar()
+    public ColorScheme SideBar()
     {
         var normal = new Terminal.Gui.Attribute(_text, _base);
         var focus = new Terminal.Gui.Attribute(_text, _surface0);
@@ -63,6 +63,30 @@ public class CatppuccinMacchiato : ITheme
             Focus = focus,
             HotNormal = normal,
             HotFocus = focus,
+        };
+    }
+
+    public ColorScheme EditBarEditing()
+    {
+        var normal = new Terminal.Gui.Attribute(Color.BrightRed, _base);
+        return new ColorScheme()
+        {
+            Normal = normal,
+            Focus = normal,
+            HotNormal = normal,
+            HotFocus = normal,
+        };
+    }
+
+    public ColorScheme EditBarSaved()
+    {
+        var normal = new Terminal.Gui.Attribute(Color.BrightGreen, _base);
+        return new ColorScheme()
+        {
+            Normal = normal,
+            Focus = normal,
+            HotNormal = normal,
+            HotFocus = normal,
         };
     }
 }

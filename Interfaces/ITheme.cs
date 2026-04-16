@@ -7,6 +7,9 @@ public interface ITheme
     ColorScheme Main();
     ColorScheme StatusBar();
 
-    ColorScheme Sidebar();
+    ColorScheme SideBar();
     ColorScheme NumberBar();
+
+    ColorScheme EditBarEditing();
+    ColorScheme EditBarSaved();
 }
