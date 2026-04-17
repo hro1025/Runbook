@@ -8,7 +8,8 @@ public class KeybindHandler(
     Dashboard dashboard,
     List<Script> scripts,
     IExecutor executor,
-    ConfirmationDialog confirmDialog
+    ConfirmationDialog confirmDialog,
+    ITheme theme
 )
 {
     private readonly Dashboard dashboard = dashboard;
@@ -17,24 +18,27 @@ public class KeybindHandler(
     private readonly ConfirmationDialog confirmDialog = confirmDialog;
     private bool isEditing;
 
+    private bool isDialogOpen;
+
     public void Register()
     {
         Application.KeyDown += async (sender, e) =>
         {
-            if (e.KeyCode == KeyCode.Esc)
+            if (e.KeyCode == KeyCode.Esc && !isDialogOpen)
             {
                 if (isEditing)
                 {
                     isEditing = false;
                     dashboard.EditBarEditing.Visible = false;
-
                     dashboard.TextView.ReadOnly = true;
                     dashboard.ListView.SetFocus();
                     e.Handled = true;
                 }
                 else
                 {
+                    isDialogOpen = true;
                     var confirmed = confirmDialog.Show("Quit", "Exit Runbook?");
+                    isDialogOpen = false;
                     if (confirmed)
                         Application.RequestStop();
                     e.Handled = true;
@@ -43,7 +47,9 @@ public class KeybindHandler(
 
             if (e.KeyCode == KeyCode.E && !isEditing && dashboard.ListView.HasFocus)
             {
+                isDialogOpen = true;
                 var confirmed = confirmDialog.Show("Edit", "Edit the script?");
+                isDialogOpen = false;
                 if (confirmed)
                 {
                     isEditing = true;
@@ -51,6 +57,16 @@ public class KeybindHandler(
                     dashboard.TextView.ReadOnly = false;
                     dashboard.TextView.SetFocus();
                 }
+                e.Handled = true;
+            }
+
+            if (e.KeyCode == KeyCode.S && !isEditing && dashboard.ListView.HasFocus)
+            {
+                var selected = scripts[dashboard.ListView.SelectedItem];
+                isDialogOpen = true;
+                var settings = new ScriptSettingsWindow(selected, theme);
+                settings.Show();
+                isDialogOpen = false;
                 e.Handled = true;
             }
             if (e.KeyCode == (KeyCode.S | KeyCode.CtrlMask) && isEditing)

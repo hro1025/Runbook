@@ -14,6 +14,8 @@ public class Dashboard
     public Label StatusBar { get; }
     public Label EditBarEditing { get; }
     public Label EditBarSaved { get; }
+    public Dictionary<string, string> ScriptOutputs { get; } = [];
+    public ProgressBar ProgressBar { get; }
 
     public Dashboard(
         List<Script> scripts,
@@ -78,7 +80,7 @@ public class Dashboard
         };
         StatusBar = new Label()
         {
-            Text = " Esc: Quit | Enter: Run | E: Edit",
+            Text = " Esc: Quit | Enter: Run | E: Edit | S: Script - Settings",
             X = 0,
             Y = Pos.AnchorEnd(1),
             Width = Dim.Fill(),
@@ -103,6 +105,15 @@ public class Dashboard
             ColorScheme = theme.EditBarSaved(),
             Visible = false,
         };
+        ProgressBar = new ProgressBar()
+        {
+            X = Pos.Center(),
+            Y = 0,
+            Width = Dim.Fill(),
+            Height = 5,
+            Visible = false,
+            ProgressBarStyle = ProgressBarStyle.MarqueeContinuous,
+        };
 
         var sidebar = new FrameView()
         {
@@ -124,7 +135,7 @@ public class Dashboard
             Height = Dim.Fill(1),
         };
 
-        var output = new FrameView()
+        var outputFrame = new FrameView()
         {
             Title = "Output",
             X = Pos.Right(preview),
@@ -145,6 +156,10 @@ public class Dashboard
                 {
                     numbers[i] = (i + 1).ToString().PadLeft(4);
                 }
+
+                ScriptOutputs.TryGetValue(selected.Path!, out var savedOutput);
+                Output.Text = savedOutput ?? "";
+
                 LineNumbers.Text = string.Join("\n", numbers);
                 TextView.Text = string.Join("\n", lines);
             }
@@ -152,19 +167,34 @@ public class Dashboard
         ListView.SelectedItem = 1;
         ListView.SelectedItem = 0;
 
-        ListView.OpenSelectedItem += (sender, e) =>
+        ListView.OpenSelectedItem += async (sender, e) =>
         {
             var selected = scripts[ListView.SelectedItem];
             var run = confirmationDialog.Show("Run Script", $"Run {selected.Name}?");
             if (run)
             {
-                Output.Text = executor.Execute(selected);
+                ProgressBar.Visible = true;
+                var timer = Application.AddTimeout(
+                    TimeSpan.FromMilliseconds(100),
+                    () =>
+                    {
+                        ProgressBar.Pulse();
+                        return true;
+                    }
+                );
+
+                var output = await executor.Execute(selected);
+
+                Application.RemoveTimeout(timer!);
+                ProgressBar.Visible = false;
+                ScriptOutputs[selected.Path!] = output;
+                Output.Text = output;
             }
         };
 
         sidebar.Add(ListView);
         preview.Add(LineNumbers, TextView);
-        output.Add(Output);
-        Window.Add(sidebar, preview, output, StatusBar, EditBarEditing, EditBarSaved);
+        outputFrame.Add(Output, ProgressBar);
+        Window.Add(sidebar, preview, outputFrame, StatusBar, EditBarEditing, EditBarSaved);
     }
 }

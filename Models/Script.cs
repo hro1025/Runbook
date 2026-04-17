@@ -7,6 +7,7 @@ namespace Runbook.Models
         public string? Path { get; set; }
 
         public ScriptType Type { get; set; }
+        public bool Loop { get; set; }
+        public bool Background { get; set; }
     }
 }
-

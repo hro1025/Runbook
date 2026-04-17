@@ -29,7 +29,7 @@ static class Program
 
         var displayNames = scripts.ConvertAll(s => $"{s.Name}");
         var dashboard = new Dashboard(scripts, displayNames, theme, confirmDialog, executor);
-        var keybindHandler = new KeybindHandler(dashboard, scripts, executor, confirmDialog);
+        var keybindHandler = new KeybindHandler(dashboard, scripts, executor, confirmDialog, theme);
 
         keybindHandler.Register();
         Application.Run(dashboard.Window);

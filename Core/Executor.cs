@@ -6,7 +6,7 @@ namespace Runbook.Core;
 
 public class Executor : IExecutor
 {
-    public string Execute(Script script)
+    public async Task<string> Execute(Script script)
     {
         string execute = script.Type switch
         {
@@ -24,7 +24,8 @@ public class Executor : IExecutor
 
         var output = process.StandardOutput.ReadToEndAsync();
         var errorOutput = process.StandardError.ReadToEndAsync();
-        Task.WaitAll(output, errorOutput);
+
+        await Task.WhenAll(output, errorOutput);
 
         return output.Result + errorOutput.Result;
     }

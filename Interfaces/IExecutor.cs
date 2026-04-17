@@ -4,5 +4,5 @@ namespace Runbook.Interfaces;
 
 public interface IExecutor
 {
-    public string Execute(Script script);
+    public Task<string> Execute(Script script);
 }
