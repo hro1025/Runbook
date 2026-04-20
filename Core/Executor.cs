@@ -20,7 +20,13 @@ public class Executor : IExecutor
         process.StartInfo.RedirectStandardOutput = true;
         process.StartInfo.RedirectStandardError = true;
         process.StartInfo.UseShellExecute = false;
+
+        process.OutputDataReceived += (sender, e) => Console.WriteLine(e.Data);
+        process.ErrorDataReceived += (sender, e) => Console.WriteLine(e.Data);
+
         process.Start();
+        process.BeginOutputReadLine();
+        process.BeginErrorReadLine();
 
         var output = process.StandardOutput.ReadToEndAsync();
         var errorOutput = process.StandardError.ReadToEndAsync();
