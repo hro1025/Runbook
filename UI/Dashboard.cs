@@ -78,9 +78,17 @@ public class Dashboard
             ReadOnly = true,
             CanFocus = true,
         };
+        TextView.ContentsChanged += (sender, e) =>
+        {
+            var lines = TextView.Text?.Split('\n') ?? [];
+            var numbers = new string[lines.Length];
+            for (int i = 0; i < lines.Length; i++)
+                numbers[i] = (i + 1).ToString().PadLeft(4);
+            LineNumbers.Text = string.Join("\n", numbers);
+        };
         StatusBar = new Label()
         {
-            Text = " Esc: Quit | Enter: Run | E: Edit ",
+            Text = " Esc: Quit | Enter: Run | E: Edit | C: Create | D: Delete ",
             X = 0,
             Y = Pos.AnchorEnd(1),
             Width = Dim.Fill(),
