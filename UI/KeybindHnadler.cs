@@ -8,8 +8,7 @@ public class KeybindHandler(
     Dashboard dashboard,
     List<Script> scripts,
     IExecutor executor,
-    ConfirmationDialog confirmDialog,
-    ITheme theme
+    ConfirmationDialog confirmDialog
 )
 {
     private readonly Dashboard dashboard = dashboard;
@@ -60,15 +59,6 @@ public class KeybindHandler(
                 e.Handled = true;
             }
 
-            if (e.KeyCode == KeyCode.S && !isEditing && dashboard.ListView.HasFocus)
-            {
-                var selected = scripts[dashboard.ListView.SelectedItem];
-                isDialogOpen = true;
-                var settings = new ScriptSettingsWindow(selected, theme);
-                settings.Show();
-                isDialogOpen = false;
-                e.Handled = true;
-            }
             if (e.KeyCode == (KeyCode.S | KeyCode.CtrlMask) && isEditing)
             {
                 var selected = scripts[dashboard.ListView.SelectedItem];

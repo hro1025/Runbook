@@ -6,7 +6,7 @@ namespace Runbook.Core;
 
 public class Executor : IExecutor
 {
-    public async Task<string> Execute(Script script)
+    public async Task Execute(Script script, Action<string> onOutput)
     {
         string execute = script.Type switch
         {
@@ -14,6 +14,7 @@ public class Executor : IExecutor
             ScriptType.CSharp => "dotnet-script",
             _ => throw new NotSupportedException($"Unknown script type: {script.Type}"),
         };
+
         var process = new Process();
         process.StartInfo.FileName = execute;
         process.StartInfo.Arguments = script.Path;
@@ -21,18 +22,21 @@ public class Executor : IExecutor
         process.StartInfo.RedirectStandardError = true;
         process.StartInfo.UseShellExecute = false;
 
-        process.OutputDataReceived += (sender, e) => Console.WriteLine(e.Data);
-        process.ErrorDataReceived += (sender, e) => Console.WriteLine(e.Data);
+        process.OutputDataReceived += (sender, e) =>
+        {
+            if (e.Data != null)
+                onOutput(e.Data);
+        };
+        process.ErrorDataReceived += (sender, e) =>
+        {
+            if (e.Data != null)
+                onOutput(e.Data);
+        };
 
         process.Start();
         process.BeginOutputReadLine();
         process.BeginErrorReadLine();
 
-        var output = process.StandardOutput.ReadToEndAsync();
-        var errorOutput = process.StandardError.ReadToEndAsync();
-
-        await Task.WhenAll(output, errorOutput);
-
-        return output.Result + errorOutput.Result;
+        await process.WaitForExitAsync();
     }
 }

@@ -63,7 +63,7 @@ public class Dashboard
             X = 0,
             Y = 0,
             Width = Dim.Fill(),
-            Height = Dim.Fill(),
+            Height = Dim.Fill(1),
             ReadOnly = true,
             CanFocus = true,
             ColorScheme = theme.Main(),
@@ -80,7 +80,7 @@ public class Dashboard
         };
         StatusBar = new Label()
         {
-            Text = " Esc: Quit | Enter: Run | E: Edit | S: Script - Settings",
+            Text = " Esc: Quit | Enter: Run | E: Edit ",
             X = 0,
             Y = Pos.AnchorEnd(1),
             Width = Dim.Fill(),
@@ -107,10 +107,10 @@ public class Dashboard
         };
         ProgressBar = new ProgressBar()
         {
-            X = Pos.Center(),
-            Y = 0,
-            Width = Dim.Fill(),
-            Height = 5,
+            X = 2,
+            Y = Pos.AnchorEnd(1),
+            Width = Dim.Fill(2),
+            Height = 1,
             Visible = false,
             ProgressBarStyle = ProgressBarStyle.MarqueeContinuous,
         };
@@ -173,9 +173,11 @@ public class Dashboard
             var run = confirmationDialog.Show("Run Script", $"Run {selected.Name}?");
             if (run)
             {
+                ScriptOutputs[selected.Path!] = "";
+                Output.Text = "";
                 ProgressBar.Visible = true;
                 var timer = Application.AddTimeout(
-                    TimeSpan.FromMilliseconds(100),
+                    TimeSpan.FromMilliseconds(30),
                     () =>
                     {
                         ProgressBar.Pulse();
@@ -183,12 +185,20 @@ public class Dashboard
                     }
                 );
 
-                var output = await executor.Execute(selected);
+                await executor.Execute(
+                    selected,
+                    line =>
+                    {
+                        Application.Invoke(() =>
+                        {
+                            ScriptOutputs[selected.Path!] += line + "\n";
+                            Output.Text = ScriptOutputs[selected.Path!];
+                        });
+                    }
+                );
 
                 Application.RemoveTimeout(timer!);
                 ProgressBar.Visible = false;
-                ScriptOutputs[selected.Path!] = output;
-                Output.Text = output;
             }
         };
 
