@@ -4,19 +4,11 @@ Runbook is a terminal-based script management tool. You can execute, edit, creat
 
 ## Installation
 
-### Linux
 1. Download `Runbook` from the [releases page](https://github.com/hro1025/Runbook/releases)
 2. Make it executable and run it:
 ```bash
 chmod +x Runbook
 ./Runbook
-```
-
-### Windows
-1. Download `Runbook.exe` from the [releases page](https://github.com/hro1025/Runbook/releases)
-2. Open a terminal (PowerShell or CMD) and run:
-```powershell
-.\Runbook.exe
 ```
 
 ## Scripts Location
