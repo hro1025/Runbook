@@ -193,8 +193,11 @@ public class Dashboard
         };
 
         // Trigger selection change to load the first script on startup
-        ListView.SelectedItem = 1;
-        ListView.SelectedItem = 0;
+
+        if (scripts.Count > 0)
+        {
+            ListView.SelectedItem = 0;
+        }
 
         // On Enter, confirm and execute the selected script, streaming output in real time
         ListView.OpenSelectedItem += async (sender, e) =>

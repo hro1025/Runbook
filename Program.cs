@@ -21,6 +21,30 @@ static class Program
         // Create the scripts folder if it doesn't exist
         Directory.CreateDirectory(fullPath);
 
+        // Seed a default test script on first launch if the folder is empty
+        if (Directory.GetFiles(fullPath).Length == 0)
+        {
+            var testScript = Path.Combine(fullPath, "test.sh");
+            File.WriteAllText(
+                testScript,
+                "#!/bin/bash\necho \"=== Runbook Test Script ===\"\necho \"User: $(whoami)\"\necho \"Host: $(hostname)\"\necho \"OS: $(uname -o)\"\necho \"Uptime: $(uptime -p)\"\necho \"===========================\"\n"
+            );
+
+            if (OperatingSystem.IsLinux() || OperatingSystem.IsMacOS())
+            {
+                File.SetUnixFileMode(
+                    testScript,
+                    UnixFileMode.UserRead
+                        | UnixFileMode.UserWrite
+                        | UnixFileMode.UserExecute
+                        | UnixFileMode.GroupRead
+                        | UnixFileMode.GroupExecute
+                        | UnixFileMode.OtherRead
+                        | UnixFileMode.OtherExecute
+                );
+            }
+        }
+
         // Scan the scripts folder and load all scripts
         IScanner scanner = new Scanner();
         var scripts = scanner.Scan(fullPath);
