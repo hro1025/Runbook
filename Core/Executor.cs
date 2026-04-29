@@ -4,10 +4,12 @@ using Runbook.Models;
 
 namespace Runbook.Core;
 
+// Handles execution of scripts as external processes
 public class Executor : IExecutor
 {
     public async Task Execute(Script script, Action<string> onOutput)
     {
+        // Determine the runner based on script type
         string execute = script.Type switch
         {
             ScriptType.Bash => "bash",
@@ -15,6 +17,7 @@ public class Executor : IExecutor
             _ => throw new NotSupportedException($"Unknown script type: {script.Type}"),
         };
 
+        // Set up the process with the correct runner and script path
         var process = new Process();
         process.StartInfo.FileName = execute;
         process.StartInfo.Arguments = script.Path;
@@ -22,6 +25,7 @@ public class Executor : IExecutor
         process.StartInfo.RedirectStandardError = true;
         process.StartInfo.UseShellExecute = false;
 
+        // Stream stdout and stderr lines back via the onOutput callback
         process.OutputDataReceived += (sender, e) =>
         {
             if (e.Data != null)
@@ -33,10 +37,10 @@ public class Executor : IExecutor
                 onOutput(e.Data);
         };
 
+        // Start the process and wait for it to finish
         process.Start();
         process.BeginOutputReadLine();
         process.BeginErrorReadLine();
-
         await process.WaitForExitAsync();
     }
 }

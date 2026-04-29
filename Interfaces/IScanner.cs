@@ -1,9 +1,9 @@
 using Runbook.Models;
 
-namespace Runbook.Interfaces
+namespace Runbook.Interfaces;
+
+// Defines the contract for scanning a folder and returning a list of scripts
+public interface IScanner
 {
-    public interface IScanner
-    {
-        public List<Script> Scan(string folderPath);
-    }
+    public List<Script> Scan(string folderPath);
 }

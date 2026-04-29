@@ -1,10 +1,10 @@
-using System.Drawing;
 using Runbook.Interfaces;
 using Runbook.Models;
 using Terminal.Gui;
 
 namespace Runbook.UI;
 
+// Handles all keyboard input and wires up the application's keybinds
 public class KeybindHandler(
     Dashboard dashboard,
     List<Script> scripts,
@@ -23,17 +23,19 @@ public class KeybindHandler(
     private readonly string scriptsPath = scriptsPath;
     private string originalText = "";
     private readonly IScanner scanner = scanner;
-    private bool isEditing;
-    private bool isDialogOpen;
+    private bool isEditing; // True when the user is editing a script
+    private bool isDialogOpen; // True when a dialog is open, prevents keybind conflicts
 
     public void Register()
     {
         Application.KeyDown += async (sender, e) =>
         {
+            // Esc: cancel editing or quit the application
             if (e.KeyCode == KeyCode.Esc && !isDialogOpen)
             {
                 if (isEditing)
                 {
+                    // If there are unsaved changes, ask before discarding
                     var currentText = dashboard.TextView.Text ?? "";
                     if (currentText != originalText)
                     {
@@ -47,6 +49,7 @@ public class KeybindHandler(
                         }
                     }
 
+                    // Restore original file contents and exit edit mode
                     var selected = scripts[dashboard.ListView.SelectedItem];
                     dashboard.TextView.Text = File.ReadAllText(selected.Path!);
                     isEditing = false;
@@ -57,6 +60,7 @@ public class KeybindHandler(
                     return;
                 }
 
+                // Not editing — confirm quit
                 isDialogOpen = true;
                 var confirmed2 = confirmDialog.Show("Quit", "Exit Runbook?");
                 isDialogOpen = false;
@@ -65,6 +69,7 @@ public class KeybindHandler(
                 e.Handled = true;
             }
 
+            // E: enter edit mode for the selected script
             if (e.KeyCode == KeyCode.E && !isEditing && dashboard.ListView.HasFocus)
             {
                 isDialogOpen = true;
@@ -80,6 +85,7 @@ public class KeybindHandler(
                 e.Handled = true;
             }
 
+            // C: create a new bash script, set permissions, and open it in edit mode
             if (e.KeyCode == KeyCode.C && !isEditing && dashboard.ListView.HasFocus)
             {
                 isDialogOpen = true;
@@ -92,9 +98,11 @@ public class KeybindHandler(
 
                     if (name != null)
                     {
+                        // Create the file with a bash shebang
                         var path = Path.Combine(scriptsPath, name + ".sh");
                         File.WriteAllText(path, "#!/bin/bash\n");
 
+                        // Make the script executable on Linux/macOS
                         if (OperatingSystem.IsLinux() || OperatingSystem.IsMacOS())
                         {
                             File.SetUnixFileMode(
@@ -111,6 +119,7 @@ public class KeybindHandler(
 
                         ReloadScripts();
 
+                        // Select the new script and open it in edit mode
                         var newIndex = scripts.FindIndex(s => s.Path == path);
                         if (newIndex >= 0)
                         {
@@ -126,6 +135,7 @@ public class KeybindHandler(
                 e.Handled = true;
             }
 
+            // D: delete the selected script after confirmation
             if (e.KeyCode == KeyCode.D && !isEditing && dashboard.ListView.HasFocus)
             {
                 var selected = scripts[dashboard.ListView.SelectedItem];
@@ -143,12 +153,15 @@ public class KeybindHandler(
                 e.Handled = true;
             }
 
+            // Ctrl+S: save the current script and briefly show the saved indicator
             if (e.KeyCode == (KeyCode.S | KeyCode.CtrlMask) && isEditing)
             {
                 var selected = scripts[dashboard.ListView.SelectedItem];
                 File.WriteAllText(selected.Path!, dashboard.TextView.Text);
                 originalText = dashboard.TextView.Text ?? "";
                 dashboard.EditBarSaved.Visible = true;
+
+                // Hide the saved indicator after 1 second
                 Application.AddTimeout(
                     TimeSpan.FromSeconds(1),
                     () =>
@@ -162,6 +175,7 @@ public class KeybindHandler(
         };
     }
 
+    // Rescans the scripts folder and refreshes the sidebar list
     private void ReloadScripts()
     {
         var newScripts = scanner.Scan(scriptsPath);
