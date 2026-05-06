@@ -14,6 +14,7 @@ public class Executor : IExecutor
         {
             ScriptType.Bash => "bash",
             ScriptType.CSharp => "dotnet-script",
+            ScriptType.Python => "python",
             _ => throw new NotSupportedException($"Unknown script type: {script.Type}"),
         };
 

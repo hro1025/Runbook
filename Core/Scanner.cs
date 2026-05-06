@@ -19,6 +19,7 @@ public class Scanner : IScanner
             {
                 ".sh" => ScriptType.Bash,
                 ".csx" => ScriptType.CSharp,
+                ".py" => ScriptType.Python,
                 _ => null,
             };
 

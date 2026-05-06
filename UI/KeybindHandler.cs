@@ -1,3 +1,4 @@
+using System.Runtime.InteropServices;
 using Runbook.Interfaces;
 using Runbook.Models;
 using Terminal.Gui;
@@ -88,47 +89,56 @@ public class KeybindHandler(
             // C: create a new bash script, set permissions, and open it in edit mode
             if (e.KeyCode == KeyCode.C && !isEditing && dashboard.ListView.HasFocus)
             {
-                isDialogOpen = true;
-                var confirmed = confirmDialog.Show("Create", "Create new script?");
-                isDialogOpen = false;
+                var name = nameDialog.Show("New Script");
 
-                if (confirmed)
+                if (name != null)
                 {
-                    var name = nameDialog.Show("New Script");
-
-                    if (name != null)
+                    var ext = Path.GetExtension(name);
+                    string? template = ext switch
                     {
-                        // Create the file with a bash shebang
-                        var path = Path.Combine(scriptsPath, name + ".sh");
-                        File.WriteAllText(path, "#!/bin/bash\n");
+                        ".sh" => "#!/bin/bash\n",
+                        ".py" => "#!/usr/bin/env python3\n",
+                        ".csx" => "#!/usr/bin/env dotnet-script\n",
+                        _ => null,
+                    };
 
-                        // Make the script executable on Linux/macOS
-                        if (OperatingSystem.IsLinux() || OperatingSystem.IsMacOS())
-                        {
-                            File.SetUnixFileMode(
-                                path,
-                                UnixFileMode.UserRead
-                                    | UnixFileMode.UserWrite
-                                    | UnixFileMode.UserExecute
-                                    | UnixFileMode.GroupRead
-                                    | UnixFileMode.GroupExecute
-                                    | UnixFileMode.OtherRead
-                                    | UnixFileMode.OtherExecute
-                            );
-                        }
+                    if (template == null)
+                    {
+                        MessageBox.Query(
+                            "Unsupported type",
+                            "Please use one of the supported script types: .sh, .py, .csx",
+                            "Ok"
+                        );
+                        return;
+                    }
 
-                        ReloadScripts();
+                    var path = Path.Combine(scriptsPath, name);
+                    File.WriteAllText(path, template);
 
-                        // Select the new script and open it in edit mode
-                        var newIndex = scripts.FindIndex(s => s.Path == path);
-                        if (newIndex >= 0)
-                        {
-                            dashboard.ListView.SelectedItem = newIndex;
-                            isEditing = true;
-                            dashboard.EditBarEditing.Visible = true;
-                            dashboard.TextView.ReadOnly = false;
-                            dashboard.TextView.SetFocus();
-                        }
+                    if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+                    {
+                        File.SetUnixFileMode(
+                            path,
+                            UnixFileMode.UserRead
+                                | UnixFileMode.UserWrite
+                                | UnixFileMode.UserExecute
+                                | UnixFileMode.GroupRead
+                                | UnixFileMode.GroupExecute
+                                | UnixFileMode.OtherRead
+                                | UnixFileMode.OtherExecute
+                        );
+                    }
+                    ReloadScripts();
+
+                    // Select the new script and open it in edit mode
+                    var newIndex = scripts.FindIndex(s => s.Path == path);
+                    if (newIndex >= 0)
+                    {
+                        dashboard.ListView.SelectedItem = newIndex;
+                        isEditing = true;
+                        dashboard.EditBarEditing.Visible = true;
+                        dashboard.TextView.ReadOnly = false;
+                        dashboard.TextView.SetFocus();
                     }
                 }
 
