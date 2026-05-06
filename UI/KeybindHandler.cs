@@ -13,7 +13,8 @@ public class KeybindHandler(
     ConfirmationDialog confirmDialog,
     NameDialog nameDialog,
     string scriptsPath,
-    IScanner scanner
+    IScanner scanner,
+    MessageDialog messageDialog
 )
 {
     private readonly Dashboard dashboard = dashboard;
@@ -22,10 +23,12 @@ public class KeybindHandler(
     private readonly ConfirmationDialog confirmDialog = confirmDialog;
     private readonly NameDialog nameDialog = nameDialog;
     private readonly string scriptsPath = scriptsPath;
-    private string originalText = "";
     private readonly IScanner scanner = scanner;
+    private readonly MessageDialog messageDialog = messageDialog;
+    private string originalText = "";
+
     private bool isEditing; // True when the user is editing a script
-    private bool isDialogOpen; // True when a dialog is open, prevents keybind conflicts
+    private bool isDialogOpen; // True when a dialog is open, prevents keybind conflictsthrow new Exception($"'{checker}' is not installed or not in PATH. Please install it to run this script.");
 
     public void Register()
     {
@@ -71,7 +74,7 @@ public class KeybindHandler(
             }
 
             // E: enter edit mode for the selected script
-            if (e.KeyCode == KeyCode.E && !isEditing && dashboard.ListView.HasFocus)
+            if (e.KeyCode == KeyCode.E && !isEditing && !isDialogOpen)
             {
                 isDialogOpen = true;
                 var confirmed = confirmDialog.Show("Edit", "Edit the script?");
@@ -89,8 +92,9 @@ public class KeybindHandler(
             // C: create a new bash script, set permissions, and open it in edit mode
             if (e.KeyCode == KeyCode.C && !isEditing && dashboard.ListView.HasFocus)
             {
+                isDialogOpen = true;
                 var name = nameDialog.Show("New Script");
-
+                isDialogOpen = false;
                 if (name != null)
                 {
                     var ext = Path.GetExtension(name);
@@ -104,10 +108,9 @@ public class KeybindHandler(
 
                     if (template == null)
                     {
-                        MessageBox.Query(
+                        messageDialog.Show(
                             "Unsupported type",
-                            "Please use one of the supported script types: .sh, .py, .csx",
-                            "Ok"
+                            "Please use one of the supported\n script types: .sh, .py, .csx"
                         );
                         return;
                     }

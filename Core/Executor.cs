@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Runtime.InteropServices;
 using Runbook.Interfaces;
 using Runbook.Models;
 
@@ -17,11 +18,43 @@ public class Executor : IExecutor
             ScriptType.Python => "python",
             _ => throw new NotSupportedException($"Unknown script type: {script.Type}"),
         };
+        // Check if the required runtime is installed
+        if (script.Type == ScriptType.Python || script.Type == ScriptType.CSharp)
+        {
+            string checker = script.Type == ScriptType.Python ? "python3" : "dotnet-script";
+
+            // Windows uses "python" instead of "python3"
+            if (
+                script.Type == ScriptType.Python
+                && RuntimeInformation.IsOSPlatform(OSPlatform.Windows)
+            )
+            {
+                checker = "python";
+            }
+
+            try
+            {
+                var check = new Process();
+                check.StartInfo.FileName = checker;
+                check.StartInfo.Arguments = "--version";
+                check.StartInfo.RedirectStandardOutput = true;
+                check.StartInfo.UseShellExecute = false;
+                check.Start();
+                await check.WaitForExitAsync();
+            }
+            catch
+            {
+                throw new Exception(
+                    $"'{checker}' is not installed or not in PATH. Please install it to run this script."
+                );
+            }
+        }
 
         // Set up the process with the correct runner and script path
         var process = new Process();
         process.StartInfo.FileName = execute;
-        process.StartInfo.Arguments = script.Path;
+        process.StartInfo.Arguments =
+            script.Type == ScriptType.Python ? $"-u {script.Path}" : script.Path;
         process.StartInfo.RedirectStandardOutput = true;
         process.StartInfo.RedirectStandardError = true;
         process.StartInfo.UseShellExecute = false;

@@ -17,13 +17,15 @@ public class Dashboard
     public Label EditBarSaved { get; }
     public Dictionary<string, string> ScriptOutputs { get; } = [];
     public ProgressBar ProgressBar { get; }
+    private readonly HashSet<string> runningScripts = [];
 
     public Dashboard(
         List<Script> scripts,
         List<string> displayNames,
         ITheme theme,
         ConfirmationDialog confirmationDialog,
-        IExecutor executor
+        IExecutor executor,
+        MessageDialog messageDialog
     )
     {
         // Root window that fills the entire terminal
@@ -63,7 +65,7 @@ public class Dashboard
         };
 
         // Output panel showing stdout/stderr from script execution
-        Output = new TextView()
+        Output = new TextView
         {
             X = 0,
             Y = 0,
@@ -72,6 +74,7 @@ public class Dashboard
             ReadOnly = true,
             CanFocus = true,
             ColorScheme = theme.Main(),
+            WordWrap = true,
         };
 
         // Script preview panel showing file contents
@@ -180,20 +183,19 @@ public class Dashboard
                 var lines = File.ReadAllLines(selected.Path!);
                 var numbers = new string[lines.Length];
                 for (int i = 0; i < lines.Length; i++)
-                {
                     numbers[i] = (i + 1).ToString().PadLeft(4);
-                }
 
                 ScriptOutputs.TryGetValue(selected.Path!, out var savedOutput);
                 Output.Text = savedOutput ?? "";
-
+                Output.MoveEnd();
                 LineNumbers.Text = string.Join("\n", numbers);
                 TextView.Text = string.Join("\n", lines);
+
+                ProgressBar.Visible = runningScripts.Contains(selected.Path!);
             }
         };
 
         // Trigger selection change to load the first script on startup
-
         if (scripts.Count > 0)
         {
             ListView.SelectedItem = 0;
@@ -208,9 +210,9 @@ public class Dashboard
             {
                 ScriptOutputs[selected.Path!] = "";
                 Output.Text = "";
+                runningScripts.Add(selected.Path!);
                 ProgressBar.Visible = true;
 
-                // Pulse the progress bar every 30ms while the script runs
                 var timer = Application.AddTimeout(
                     TimeSpan.FromMilliseconds(30),
                     () =>
@@ -220,20 +222,34 @@ public class Dashboard
                     }
                 );
 
-                await executor.Execute(
-                    selected,
-                    line =>
-                    {
-                        Application.Invoke(() =>
+                try
+                {
+                    await executor.Execute(
+                        selected,
+                        line =>
                         {
-                            ScriptOutputs[selected.Path!] += line + "\n";
-                            Output.Text = ScriptOutputs[selected.Path!];
-                        });
-                    }
-                );
+                            Application.Invoke(() =>
+                            {
+                                ScriptOutputs[selected.Path!] += line + "\n";
+                                if (scripts[ListView.SelectedItem].Path == selected.Path)
+                                {
+                                    Output.Text = ScriptOutputs[selected.Path!];
+                                    Output.MoveEnd();
+                                }
+                            });
+                        }
+                    );
+                }
+                catch (Exception ex)
+                {
+                    Application.Invoke(() => messageDialog.Show("Missing runtime", ex.Message));
+                }
 
                 Application.RemoveTimeout(timer!);
-                ProgressBar.Visible = false;
+                runningScripts.Remove(selected.Path!);
+
+                if (scripts[ListView.SelectedItem].Path == selected.Path)
+                    ProgressBar.Visible = false;
             }
         };
 

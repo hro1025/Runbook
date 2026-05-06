@@ -55,15 +55,23 @@ static class Program
         // Set up the theme, dialogs, and executor
         ITheme theme = new CatppuccinMacchiato();
         var confirmDialog = new ConfirmationDialog(theme);
+        var messageDialog = new MessageDialog(theme);
         IExecutor executor = new Executor();
 
         // Apply the theme to the global color schemes
         Colors.ColorSchemes["Dialog"] = theme.Main();
-        Colors.ColorSchemes["Base"] = theme.Main();
+        Colors.ColorSchemes["Main"] = theme.Main();
 
         // Build the main dashboard with the loaded scripts
         var displayNames = scripts.ConvertAll(s => $"{s.Name}");
-        var dashboard = new Dashboard(scripts, displayNames, theme, confirmDialog, executor);
+        var dashboard = new Dashboard(
+            scripts,
+            displayNames,
+            theme,
+            confirmDialog,
+            executor,
+            messageDialog
+        );
 
         // Set up and register all keybinds
         var nameDialog = new NameDialog(theme);
@@ -74,7 +82,8 @@ static class Program
             confirmDialog,
             nameDialog,
             fullPath,
-            scanner
+            scanner,
+            messageDialog
         );
         keybindHandler.Register();
 
