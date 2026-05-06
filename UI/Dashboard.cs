@@ -53,17 +53,6 @@ public class Dashboard
             new System.Collections.ObjectModel.ObservableCollection<string>(displayNames)
         );
 
-        // Line number gutter shown alongside the preview
-        LineNumbers = new Label
-        {
-            X = 0,
-            Y = 0,
-            Width = 5,
-            Height = Dim.Fill(),
-            CanFocus = false,
-            ColorScheme = theme.NumberBar(),
-        };
-
         // Output panel showing stdout/stderr from script execution
         Output = new TextView
         {
@@ -80,7 +69,7 @@ public class Dashboard
         // Script preview panel showing file contents
         TextView = new TextView()
         {
-            X = 5,
+            X = 1,
             Y = 0,
             Width = Dim.Fill(),
             Height = Dim.Fill(),
@@ -95,7 +84,6 @@ public class Dashboard
             var numbers = new string[lines.Length];
             for (int i = 0; i < lines.Length; i++)
                 numbers[i] = (i + 1).ToString().PadLeft(4);
-            LineNumbers.Text = string.Join("\n", numbers);
         };
 
         // Bottom status bar showing available keybinds
@@ -188,7 +176,6 @@ public class Dashboard
                 ScriptOutputs.TryGetValue(selected.Path!, out var savedOutput);
                 Output.Text = savedOutput ?? "";
                 Output.MoveEnd();
-                LineNumbers.Text = string.Join("\n", numbers);
                 TextView.Text = string.Join("\n", lines);
 
                 ProgressBar.Visible = runningScripts.Contains(selected.Path!);
@@ -254,7 +241,7 @@ public class Dashboard
         };
 
         sidebar.Add(ListView);
-        preview.Add(LineNumbers, TextView);
+        preview.Add(TextView);
         outputFrame.Add(Output, ProgressBar);
         Window.Add(sidebar, preview, outputFrame, StatusBar, EditBarEditing, EditBarSaved);
     }

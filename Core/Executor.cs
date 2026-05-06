@@ -53,8 +53,8 @@ public class Executor : IExecutor
         // Set up the process with the correct runner and script path
         var process = new Process();
         process.StartInfo.FileName = execute;
-        process.StartInfo.Arguments =
-            script.Type == ScriptType.Python ? $"-u {script.Path}" : script.Path;
+        process.StartInfo.Arguments = process.StartInfo.Arguments =
+            script.Type == ScriptType.Python ? $"-u \"{script.Path}\"" : $"\"{script.Path}\"";
         process.StartInfo.RedirectStandardOutput = true;
         process.StartInfo.RedirectStandardError = true;
         process.StartInfo.UseShellExecute = false;

@@ -41,19 +41,6 @@ public class CatppuccinMacchiato : ITheme
         };
     }
 
-    // Line number bar: dimmed overlay text on dark mantle background
-    public ColorScheme NumberBar()
-    {
-        var attr = new Terminal.Gui.Attribute(overlay1, mantle);
-        return new ColorScheme()
-        {
-            Normal = attr,
-            Focus = attr,
-            HotNormal = attr,
-            HotFocus = attr,
-        };
-    }
-
     // Sidebar script list: highlights selected item with surface0 background
     public ColorScheme SideBar()
     {
