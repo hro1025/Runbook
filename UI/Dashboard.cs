@@ -16,6 +16,7 @@ public class Dashboard
     public Label EditBarEditing { get; }
     public Label EditBarSaved { get; }
     public Dictionary<string, string> ScriptOutputs { get; } = [];
+    public Dictionary<string, string> ScriptEdits { get; } = [];
     public ProgressBar ProgressBar { get; }
     private readonly HashSet<string> runningScripts = [];
 
@@ -168,17 +169,29 @@ public class Dashboard
             if (e.Item >= 0 && e.Item < scripts.Count)
             {
                 var selected = scripts[e.Item];
-                var lines = File.ReadAllLines(selected.Path!);
-                var numbers = new string[lines.Length];
-                for (int i = 0; i < lines.Length; i++)
-                    numbers[i] = (i + 1).ToString().PadLeft(4);
 
                 ScriptOutputs.TryGetValue(selected.Path!, out var savedOutput);
                 Output.Text = savedOutput ?? "";
                 Output.MoveEnd();
-                TextView.Text = string.Join("\n", lines);
+
+                // Restore staged edit if one exists, otherwise load from disk
+                if (ScriptEdits.TryGetValue(selected.Path!, out var edited))
+                    TextView.Text = edited;
+                else
+                    TextView.Text = File.ReadAllText(selected.Path!);
 
                 ProgressBar.Visible = runningScripts.Contains(selected.Path!);
+            }
+        };
+
+        // Track edits per script in memory as the user types
+        TextView.ContentsChanged += (sender, e) =>
+        {
+            if (ListView.SelectedItem >= 0 && ListView.SelectedItem < scripts.Count)
+            {
+                var selected = scripts[ListView.SelectedItem];
+                if (selected.Path != null)
+                    ScriptEdits[selected.Path] = TextView.Text ?? "";
             }
         };
 
@@ -192,6 +205,12 @@ public class Dashboard
         ListView.OpenSelectedItem += async (sender, e) =>
         {
             var selected = scripts[ListView.SelectedItem];
+            // Check before asking — no point confirming if it's already running
+            if (runningScripts.Contains(selected.Path!))
+            {
+                messageDialog.Show("Already running", $"{selected.Name} is already running.");
+                return;
+            }
             var run = confirmationDialog.Show("Run Script", $"Run {selected.Name}?");
             if (run)
             {

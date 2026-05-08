@@ -25,10 +25,9 @@ public class KeybindHandler(
     private readonly string scriptsPath = scriptsPath;
     private readonly IScanner scanner = scanner;
     private readonly MessageDialog messageDialog = messageDialog;
-    private string originalText = "";
 
     private bool isEditing; // True when the user is editing a script
-    private bool isDialogOpen; // True when a dialog is open, prevents keybind conflictsthrow new Exception($"'{checker}' is not installed or not in PATH. Please install it to run this script.");
+    private bool isDialogOpen; // True when a dialog is open, prevents keybind conflicts
 
     public void Register()
     {
@@ -39,23 +38,37 @@ public class KeybindHandler(
             {
                 if (isEditing)
                 {
-                    // If there are unsaved changes, ask before discarding
-                    var currentText = dashboard.TextView.Text ?? "";
-                    if (currentText != originalText)
+                    var selected = scripts[dashboard.ListView.SelectedItem];
+                    var diskContent = File.ReadAllText(selected.Path!);
+
+                    // Only prompt if content has actually changed since last save
+                    if (
+                        dashboard.ScriptEdits.TryGetValue(selected.Path!, out var staged)
+                        && staged != diskContent
+                    )
                     {
                         isDialogOpen = true;
-                        var confirmed = confirmDialog.Show("Unsaved Changes", "Discard changes?");
+                        var confirmed = confirmDialog.Show(
+                            "Unsaved Changes",
+                            "Save before exiting?"
+                        );
                         isDialogOpen = false;
-                        if (!confirmed)
+
+                        if (confirmed)
                         {
-                            e.Handled = true;
-                            return;
+                            // Yes — save staged content to disk before exiting
+                            File.WriteAllText(selected.Path!, staged);
+                            dashboard.ScriptEdits.Remove(selected.Path!);
+                        }
+                        else
+                        {
+                            // No — discard staged content and restore from disk
+                            dashboard.ScriptEdits.Remove(selected.Path!);
+                            dashboard.TextView.Text = diskContent;
                         }
                     }
 
-                    // Restore original file contents and exit edit mode
-                    var selected = scripts[dashboard.ListView.SelectedItem];
-                    dashboard.TextView.Text = File.ReadAllText(selected.Path!);
+                    // Shared cleanup — runs regardless of save or discard choice
                     isEditing = false;
                     dashboard.EditBarEditing.Visible = false;
                     dashboard.TextView.ReadOnly = true;
@@ -76,25 +89,20 @@ public class KeybindHandler(
             // E: enter edit mode for the selected script
             if (e.KeyCode == KeyCode.E && !isEditing && !isDialogOpen)
             {
-                isDialogOpen = true;
-                var confirmed = confirmDialog.Show("Edit", "Edit the script?");
-                isDialogOpen = false;
-                if (confirmed)
-                {
-                    isEditing = true;
-                    dashboard.EditBarEditing.Visible = true;
-                    dashboard.TextView.ReadOnly = false;
-                    dashboard.TextView.SetFocus();
-                }
+                isEditing = true;
+                dashboard.EditBarEditing.Visible = true;
+                dashboard.TextView.ReadOnly = false;
+                dashboard.TextView.SetFocus();
                 e.Handled = true;
             }
 
-            // C: create a new bash script, set permissions, and open it in edit mode
-            if (e.KeyCode == KeyCode.C && !isEditing && dashboard.ListView.HasFocus)
+            // C: create a new script, set permissions, and open it in edit mode
+            if (e.KeyCode == KeyCode.C && !isEditing && !isDialogOpen)
             {
                 isDialogOpen = true;
                 var name = nameDialog.Show("New Script");
                 isDialogOpen = false;
+
                 if (name != null)
                 {
                     var ext = Path.GetExtension(name);
@@ -110,8 +118,9 @@ public class KeybindHandler(
                     {
                         messageDialog.Show(
                             "Unsupported type",
-                            "Please use one of the supported\n script types: .sh, .py, .csx"
+                            "Please use one of the supported script types: .sh, .py, .csx"
                         );
+                        e.Handled = true;
                         return;
                     }
 
@@ -131,6 +140,7 @@ public class KeybindHandler(
                                 | UnixFileMode.OtherExecute
                         );
                     }
+
                     ReloadScripts();
 
                     // Select the new script and open it in edit mode
@@ -171,7 +181,10 @@ public class KeybindHandler(
             {
                 var selected = scripts[dashboard.ListView.SelectedItem];
                 File.WriteAllText(selected.Path!, dashboard.TextView.Text);
-                originalText = dashboard.TextView.Text ?? "";
+
+                // Remove the staged edit since it's now persisted to disk
+                dashboard.ScriptEdits.Remove(selected.Path!);
+
                 dashboard.EditBarSaved.Visible = true;
 
                 // Hide the saved indicator after 1 second
