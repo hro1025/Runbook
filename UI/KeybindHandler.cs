@@ -56,28 +56,25 @@ public class KeybindHandler(
 
                         if (confirmed)
                         {
-                            // Yes — save staged content to disk before exiting
                             File.WriteAllText(selected.Path!, staged);
                             dashboard.ScriptEdits.Remove(selected.Path!);
                         }
                         else
                         {
-                            // No — discard staged content and restore from disk
                             dashboard.ScriptEdits.Remove(selected.Path!);
                             dashboard.TextView.Text = diskContent;
                         }
                     }
 
-                    // Shared cleanup — runs regardless of save or discard choice
                     isEditing = false;
                     dashboard.EditBarEditing.Visible = false;
                     dashboard.TextView.ReadOnly = true;
                     dashboard.ListView.SetFocus();
+                    dashboard.RefreshDisplayNames(scripts, null);
                     e.Handled = true;
                     return;
                 }
 
-                // Not editing — confirm quit
                 isDialogOpen = true;
                 var confirmed2 = confirmDialog.Show("Quit", "Exit Runbook?");
                 isDialogOpen = false;
@@ -89,10 +86,12 @@ public class KeybindHandler(
             // E: enter edit mode for the selected script
             if (e.KeyCode == KeyCode.E && !isEditing && !isDialogOpen)
             {
+                var selected = scripts[dashboard.ListView.SelectedItem];
                 isEditing = true;
                 dashboard.EditBarEditing.Visible = true;
                 dashboard.TextView.ReadOnly = false;
                 dashboard.TextView.SetFocus();
+                dashboard.RefreshDisplayNames(scripts, selected.Path);
                 e.Handled = true;
             }
 
@@ -118,7 +117,7 @@ public class KeybindHandler(
                     {
                         messageDialog.Show(
                             "Unsupported type",
-                            "Please use one of the supported script types: .sh, .py, .csx"
+                            "Please use one of the supported script types\n.sh, .py, .csx"
                         );
                         e.Handled = true;
                         return;
@@ -143,7 +142,6 @@ public class KeybindHandler(
 
                     ReloadScripts();
 
-                    // Select the new script and open it in edit mode
                     var newIndex = scripts.FindIndex(s => s.Path == path);
                     if (newIndex >= 0)
                     {
@@ -152,6 +150,7 @@ public class KeybindHandler(
                         dashboard.EditBarEditing.Visible = true;
                         dashboard.TextView.ReadOnly = false;
                         dashboard.TextView.SetFocus();
+                        dashboard.RefreshDisplayNames(scripts, path);
                     }
                 }
 
@@ -181,13 +180,9 @@ public class KeybindHandler(
             {
                 var selected = scripts[dashboard.ListView.SelectedItem];
                 File.WriteAllText(selected.Path!, dashboard.TextView.Text);
-
-                // Remove the staged edit since it's now persisted to disk
                 dashboard.ScriptEdits.Remove(selected.Path!);
-
                 dashboard.EditBarSaved.Visible = true;
 
-                // Hide the saved indicator after 1 second
                 Application.AddTimeout(
                     TimeSpan.FromSeconds(1),
                     () =>
@@ -207,10 +202,6 @@ public class KeybindHandler(
         var newScripts = scanner.Scan(scriptsPath);
         scripts.Clear();
         scripts.AddRange(newScripts);
-
-        var newNames = newScripts.ConvertAll(s => s.Name ?? "");
-        dashboard.ListView.SetSource(
-            new System.Collections.ObjectModel.ObservableCollection<string>(newNames)
-        );
+        dashboard.RefreshDisplayNames(scripts, null);
     }
 }

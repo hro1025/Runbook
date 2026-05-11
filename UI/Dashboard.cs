@@ -17,8 +17,27 @@ public class Dashboard
     public Label EditBarSaved { get; }
     public Dictionary<string, string> ScriptOutputs { get; } = [];
     public Dictionary<string, string> ScriptEdits { get; } = [];
+    public Dictionary<string, string> ScriptStatus { get; } = [];
     public ProgressBar ProgressBar { get; }
     private readonly HashSet<string> runningScripts = [];
+
+    public void RefreshDisplayNames(List<Script> scripts, string? editingPath)
+    {
+        var names = scripts.ConvertAll(s =>
+        {
+            var emoji = "";
+            if (editingPath == s.Path)
+                emoji = " ✏️";
+            else if (runningScripts.Contains(s.Path!))
+                emoji = " ⏳";
+            else if (ScriptStatus.TryGetValue(s.Path!, out var status))
+                emoji = status == "done" ? " ✅" : " ❌";
+
+            return s.Name + emoji;
+        });
+
+        ListView.SetSource(new System.Collections.ObjectModel.ObservableCollection<string>(names));
+    }
 
     public Dashboard(
         List<Script> scripts,
@@ -249,10 +268,12 @@ public class Dashboard
                 catch (Exception ex)
                 {
                     Application.Invoke(() => messageDialog.Show("Missing runtime", ex.Message));
+                    ScriptStatus?[selected.Path!] = "error";
                 }
 
                 Application.RemoveTimeout(timer!);
                 runningScripts.Remove(selected.Path!);
+                ScriptStatus?[selected.Path!] = "done";
 
                 if (scripts[ListView.SelectedItem].Path == selected.Path)
                     ProgressBar.Visible = false;

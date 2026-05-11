@@ -25,6 +25,7 @@ public class MessageDialog(ITheme theme)
             X = Pos.Center(),
             Y = 1,
             Width = Dim.Fill(2),
+            TextAlignment = Alignment.Center,
             ColorScheme = theme.SideBar(),
         };
 
