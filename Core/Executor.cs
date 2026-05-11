@@ -8,6 +8,36 @@ namespace Runbook.Core;
 // Handles execution of scripts as external processes
 public class Executor : IExecutor
 {
+    public async Task<bool> IsRuntimeAvailable(ScriptType type)
+    {
+        string checker = "";
+
+        if (type == ScriptType.Python)
+            checker = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? "python" : "python3";
+
+        if (type == ScriptType.CSharp)
+            checker = "dotnet-script";
+
+        if (type == ScriptType.Bash)
+            checker = "bash";
+
+        try
+        {
+            var check = new Process();
+            check.StartInfo.FileName = checker;
+            check.StartInfo.Arguments = "--version";
+            check.StartInfo.RedirectStandardOutput = true;
+            check.StartInfo.UseShellExecute = false;
+            check.Start();
+            await check.WaitForExitAsync();
+            return true;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
     public async Task Execute(Script script, Action<string> onOutput)
     {
         // Determine the runner based on script type
@@ -15,45 +45,24 @@ public class Executor : IExecutor
         {
             ScriptType.Bash => "bash",
             ScriptType.CSharp => "dotnet-script",
-            ScriptType.Python => "python",
+            ScriptType.Python => RuntimeInformation.IsOSPlatform(OSPlatform.Windows)
+                ? "python"
+                : "python3",
             _ => throw new NotSupportedException($"Unknown script type: {script.Type}"),
         };
+
         // Check if the required runtime is installed
-        if (script.Type == ScriptType.Python || script.Type == ScriptType.CSharp)
+        if (!await IsRuntimeAvailable(script.Type))
         {
-            string checker = script.Type == ScriptType.Python ? "python3" : "dotnet-script";
-
-            // Windows uses "python" instead of "python3"
-            if (
-                script.Type == ScriptType.Python
-                && RuntimeInformation.IsOSPlatform(OSPlatform.Windows)
-            )
-            {
-                checker = "python";
-            }
-
-            try
-            {
-                var check = new Process();
-                check.StartInfo.FileName = checker;
-                check.StartInfo.Arguments = "--version";
-                check.StartInfo.RedirectStandardOutput = true;
-                check.StartInfo.UseShellExecute = false;
-                check.Start();
-                await check.WaitForExitAsync();
-            }
-            catch
-            {
-                throw new Exception(
-                    $"'{checker}' is not installed or not in PATH. Please install it to run this script."
-                );
-            }
+            throw new Exception(
+                $"'{execute}' is not installed or not in PATH.\nPlease install it to run this script."
+            );
         }
 
         // Set up the process with the correct runner and script path
         var process = new Process();
         process.StartInfo.FileName = execute;
-        process.StartInfo.Arguments = process.StartInfo.Arguments =
+        process.StartInfo.Arguments =
             script.Type == ScriptType.Python ? $"-u \"{script.Path}\"" : $"\"{script.Path}\"";
         process.StartInfo.RedirectStandardOutput = true;
         process.StartInfo.RedirectStandardError = true;

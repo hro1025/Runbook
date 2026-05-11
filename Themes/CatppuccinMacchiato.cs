@@ -11,8 +11,6 @@ public class CatppuccinMacchiato : ITheme
     private readonly Color main = new(36, 39, 58); // #24273a
     private readonly Color surface0 = new(54, 58, 79); // #363a4f
     private readonly Color blue = new(138, 173, 244); // #8aadf4
-    private readonly Color overlay1 = new(110, 115, 141); // #6e738d
-    private readonly Color mantle = new(30, 32, 48); // #1e2030
 
     // Main UI area: text on base, blue highlight on focus
     public ColorScheme Main()

@@ -12,7 +12,7 @@ public class MessageDialog(ITheme theme)
         var dialog = new Dialog
         {
             Title = title,
-            Width = 50,
+            Width = 53,
             Height = 10,
             ShadowStyle = ShadowStyle.None,
             BorderStyle = LineStyle.Heavy,

@@ -1,5 +1,6 @@
 ﻿using Runbook.Core;
 using Runbook.Interfaces;
+using Runbook.Models;
 using Runbook.Themes;
 using Runbook.UI;
 using Terminal.Gui;
@@ -9,9 +10,9 @@ namespace Runbook;
 // Entry point of the application
 static class Program
 {
-    static void Main(string[] args)
+    static async Task Main()
     {
-        ArgumentNullException.ThrowIfNull(args);
+        var executor = new Executor();
 
         // Build the path to the scripts folder (~/.scripts/runbook/)
         string homePath = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
@@ -21,30 +22,52 @@ static class Program
         // Create the scripts folder if it doesn't exist
         Directory.CreateDirectory(fullPath);
 
-        // Seed a default test script on first launch if the folder is empty
-        if (Directory.GetFiles(fullPath).Length == 0)
+        // Seed a defauldt test script on first launch if the folder is empty
+        if (
+            await executor.IsRuntimeAvailable(ScriptType.Bash)
+            && Directory.GetFiles(fullPath).Length == 0
+        )
         {
-            var testScript = Path.Combine(fullPath, "test.sh");
-            File.WriteAllText(
-                testScript,
-                "#!/bin/bash\necho \"=== Runbook Test Script ===\"\necho \"User: $(whoami)\"\necho \"Host: $(hostname)\"\necho \"OS: $(uname -o)\"\necho \"Uptime: $(uptime -p)\"\necho \"===========================\"\n"
-            );
-
-            if (OperatingSystem.IsLinux() || OperatingSystem.IsMacOS())
+            if (await executor.IsRuntimeAvailable(ScriptType.Bash))
             {
-                File.SetUnixFileMode(
+                var testScript = Path.Combine(fullPath, "test.sh");
+                File.WriteAllText(
                     testScript,
-                    UnixFileMode.UserRead
-                        | UnixFileMode.UserWrite
-                        | UnixFileMode.UserExecute
-                        | UnixFileMode.GroupRead
-                        | UnixFileMode.GroupExecute
-                        | UnixFileMode.OtherRead
-                        | UnixFileMode.OtherExecute
+                    "#!/bin/bash\necho \"=== Runbook Test Script ===\"\necho \"Runtime: Bash\"\necho \"User: $(whoami)\"\necho \"Host: $(hostname)\"\necho \"OS: $(uname -o)\"\necho \"Uptime: $(uptime -p)\"\necho \"=== Runbook is working correctly ===\""
+                );
+                if (OperatingSystem.IsLinux() || OperatingSystem.IsMacOS())
+                {
+                    File.SetUnixFileMode(
+                        testScript,
+                        UnixFileMode.UserRead
+                            | UnixFileMode.UserWrite
+                            | UnixFileMode.UserExecute
+                            | UnixFileMode.GroupRead
+                            | UnixFileMode.GroupExecute
+                            | UnixFileMode.OtherRead
+                            | UnixFileMode.OtherExecute
+                    );
+                }
+            }
+
+            if (await executor.IsRuntimeAvailable(ScriptType.Python))
+            {
+                var testScript = Path.Combine(fullPath, "test.py");
+                File.WriteAllText(
+                    testScript,
+                    "import platform, getpass, socket\nprint(\"=== Runbook Test Script ===\")\nprint(f\"Runtime: Python {platform.python_version()}\")\nprint(f\"User: {getpass.getuser()}\")\nprint(f\"Host: {socket.gethostname()}\")\nprint(f\"OS: {platform.system()} {platform.release()}\")\nprint(f\"Machine: {platform.machine()}\")\nprint(\"=== Runbook is working correctly ===\")"
+                );
+            }
+
+            if (await executor.IsRuntimeAvailable(ScriptType.CSharp))
+            {
+                var testScript = Path.Combine(fullPath, "test.csx");
+                File.WriteAllText(
+                    testScript,
+                    "using System.Runtime.InteropServices;\nConsole.WriteLine(\"=== Runbook Test Script ===\");\nConsole.WriteLine($\"Runtime: dotnet-script / .NET {Environment.Version}\");\nConsole.WriteLine($\"User: {Environment.UserName}\");\nConsole.WriteLine($\"Host: {Environment.MachineName}\");\nConsole.WriteLine($\"OS: {RuntimeInformation.OSDescription}\");\nConsole.WriteLine($\"Architecture: {RuntimeInformation.OSArchitecture}\");\nConsole.WriteLine(\"=== Runbook is working correctly ===\");"
                 );
             }
         }
-
         // Scan the scripts folder and load all scripts
         IScanner scanner = new Scanner();
         var scripts = scanner.Scan(fullPath);
@@ -56,7 +79,6 @@ static class Program
         ITheme theme = new CatppuccinMacchiato();
         var confirmDialog = new ConfirmationDialog(theme);
         var messageDialog = new MessageDialog(theme);
-        IExecutor executor = new Executor();
 
         // Apply the theme to the global color schemes
         Colors.ColorSchemes["Dialog"] = theme.Main();
