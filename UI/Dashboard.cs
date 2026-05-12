@@ -20,23 +20,42 @@ public class Dashboard
     public Dictionary<string, string> ScriptStatus { get; } = [];
     public ProgressBar ProgressBar { get; }
     private readonly HashSet<string> runningScripts = [];
+    private readonly Dictionary<string, CancellationTokenSource> cancellations = [];
 
     public void RefreshDisplayNames(List<Script> scripts, string? editingPath)
     {
+        var currentIndex = ListView.SelectedItem;
+        int maxLen = scripts.Count > 0 ? scripts.Max(s => s.Name.Length) : 0;
+
         var names = scripts.ConvertAll(s =>
         {
-            var emoji = "";
+            string status;
             if (editingPath == s.Path)
-                emoji = " ✏️";
+            {
+                status = "Editing";
+            }
             else if (runningScripts.Contains(s.Path!))
-                emoji = " ⏳";
-            else if (ScriptStatus.TryGetValue(s.Path!, out var status))
-                emoji = status == "done" ? " ✅" : " ❌";
+            {
+                status = "Running";
+            }
+            else if (ScriptStatus.TryGetValue(s.Path!, out var st))
+            {
+                status =
+                    st == "done" ? "Done"
+                    : st == "stopped" ? "Stopped"
+                    : "Error";
+            }
+            else
+            {
+                status = "";
+            }
 
-            return s.Name + emoji;
+            var paddedName = s.Name.PadRight(maxLen);
+            return status?.Length == 0 ? paddedName : $"{paddedName}  >> {status}";
         });
 
         ListView.SetSource(new System.Collections.ObjectModel.ObservableCollection<string>(names));
+        ListView.SelectedItem = currentIndex;
     }
 
     public Dashboard(
@@ -73,6 +92,17 @@ public class Dashboard
             new System.Collections.ObjectModel.ObservableCollection<string>(displayNames)
         );
 
+        // Script preview panel showing file contents
+        TextView = new TextView()
+        {
+            X = 1,
+            Y = 0,
+            Width = Dim.Fill(),
+            Height = Dim.Fill(),
+            ReadOnly = true,
+            CanFocus = true,
+        };
+
         // Output panel showing stdout/stderr from script execution
         Output = new TextView
         {
@@ -84,17 +114,6 @@ public class Dashboard
             CanFocus = true,
             ColorScheme = theme.Main(),
             WordWrap = true,
-        };
-
-        // Script preview panel showing file contents
-        TextView = new TextView()
-        {
-            X = 1,
-            Y = 0,
-            Width = Dim.Fill(),
-            Height = Dim.Fill(),
-            ReadOnly = true,
-            CanFocus = true,
         };
 
         // Update line numbers whenever the preview content changes
@@ -224,18 +243,30 @@ public class Dashboard
         ListView.OpenSelectedItem += async (sender, e) =>
         {
             var selected = scripts[ListView.SelectedItem];
-            // Check before asking — no point confirming if it's already running
+
             if (runningScripts.Contains(selected.Path!))
             {
-                messageDialog.Show("Already running", $"{selected.Name} is already running.");
+                var stop = confirmationDialog.Show(
+                    "Already running",
+                    "Do you want to stop the Script?"
+                );
+                if (stop && cancellations.TryGetValue(selected.Path!, out var existingCts))
+                    existingCts.Cancel();
                 return;
             }
+
             var run = confirmationDialog.Show("Run Script", $"Run {selected.Name}?");
+            Application.Invoke(() => ListView.SetFocus());
             if (run)
             {
                 ScriptOutputs[selected.Path!] = "";
                 Output.Text = "";
+                ScriptStatus.Remove(selected.Path!);
+
+                var cts = new CancellationTokenSource();
+                cancellations[selected.Path!] = cts;
                 runningScripts.Add(selected.Path!);
+                Application.Invoke(() => RefreshDisplayNames(scripts, null));
                 ProgressBar.Visible = true;
 
                 var timer = Application.AddTimeout(
@@ -256,27 +287,47 @@ public class Dashboard
                             Application.Invoke(() =>
                             {
                                 ScriptOutputs[selected.Path!] += line + "\n";
-                                if (scripts[ListView.SelectedItem].Path == selected.Path)
+                                if (
+                                    ListView.SelectedItem >= 0
+                                    && ListView.SelectedItem < scripts.Count
+                                    && scripts[ListView.SelectedItem].Path == selected.Path
+                                )
                                 {
                                     Output.Text = ScriptOutputs[selected.Path!];
                                     Output.MoveEnd();
                                 }
                             });
-                        }
+                        },
+                        cts.Token
                     );
+                }
+                catch (OperationCanceledException)
+                {
+                    ScriptStatus[selected.Path!] = "stopped";
                 }
                 catch (Exception ex)
                 {
-                    Application.Invoke(() => messageDialog.Show("Missing runtime", ex.Message));
-                    ScriptStatus?[selected.Path!] = "error";
+                    Application.Invoke(() => messageDialog.Show("Error", ex.Message));
+                    ScriptStatus[selected.Path!] = "error";
                 }
+                if (!ScriptStatus.ContainsKey(selected.Path!))
+                    ScriptStatus[selected.Path!] = "done";
 
                 Application.RemoveTimeout(timer!);
-                runningScripts.Remove(selected.Path!);
-                ScriptStatus?[selected.Path!] = "done";
 
-                if (scripts[ListView.SelectedItem].Path == selected.Path)
+                Application.RemoveTimeout(timer!);
+                cancellations.Remove(selected.Path!);
+                runningScripts.Remove(selected.Path!);
+                Application.Invoke(() => RefreshDisplayNames(scripts, null));
+
+                if (
+                    ListView.SelectedItem >= 0
+                    && ListView.SelectedItem < scripts.Count
+                    && scripts[ListView.SelectedItem].Path == selected.Path
+                )
+                {
                     ProgressBar.Visible = false;
+                }
             }
         };
 

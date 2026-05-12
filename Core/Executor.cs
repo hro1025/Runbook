@@ -38,7 +38,11 @@ public class Executor : IExecutor
         }
     }
 
-    public async Task Execute(Script script, Action<string> onOutput)
+    public async Task Execute(
+        Script script,
+        Action<string> onOutput,
+        CancellationToken cancellationToken
+    )
     {
         // Determine the runner based on script type
         string execute = script.Type switch
@@ -84,6 +88,16 @@ public class Executor : IExecutor
         process.Start();
         process.BeginOutputReadLine();
         process.BeginErrorReadLine();
-        await process.WaitForExitAsync();
+        try
+        {
+            await process.WaitForExitAsync(cancellationToken);
+        }
+        catch (OperationCanceledException)
+        {
+            process.Kill(entireProcessTree: true);
+            throw;
+        }
+        if (process.ExitCode != 0)
+            throw new Exception($"Script exited with code {process.ExitCode}");
     }
 }

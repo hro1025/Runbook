@@ -6,5 +6,9 @@ namespace Runbook.Interfaces;
 public interface IExecutor
 {
     Task<bool> IsRuntimeAvailable(ScriptType type);
-    public Task Execute(Script script, Action<string> onOutput);
+    public Task Execute(
+        Script script,
+        Action<string> onOutput,
+        CancellationToken cancellationToken
+    );
 }

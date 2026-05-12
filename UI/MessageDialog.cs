@@ -16,7 +16,6 @@ public class MessageDialog(ITheme theme)
             Height = 10,
             ShadowStyle = ShadowStyle.None,
             BorderStyle = LineStyle.Heavy,
-            ColorScheme = theme.Main(),
         };
 
         var label = new Label
