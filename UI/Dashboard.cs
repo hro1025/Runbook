@@ -4,7 +4,6 @@ using Terminal.Gui;
 
 namespace Runbook.UI;
 
-// Builds and owns all UI components that make up the main application window
 public class Dashboard
 {
     public Window Window { get; }
@@ -67,7 +66,6 @@ public class Dashboard
         MessageDialog messageDialog
     )
     {
-        // Root window that fills the entire terminal
         Window = new Window
         {
             Title = "",
@@ -79,7 +77,6 @@ public class Dashboard
             ColorScheme = theme.Main(),
         };
 
-        // Sidebar list of script names
         ListView = new ListView()
         {
             X = 0,
@@ -92,7 +89,6 @@ public class Dashboard
             new System.Collections.ObjectModel.ObservableCollection<string>(displayNames)
         );
 
-        // Script preview panel showing file contents
         TextView = new TextView()
         {
             X = 1,
@@ -103,7 +99,6 @@ public class Dashboard
             CanFocus = true,
         };
 
-        // Output panel showing stdout/stderr from script execution
         Output = new TextView
         {
             X = 0,
@@ -113,10 +108,9 @@ public class Dashboard
             ReadOnly = true,
             CanFocus = true,
             ColorScheme = theme.Main(),
-            WordWrap = true,
+            WordWrap = false,
         };
 
-        // Update line numbers whenever the preview content changes
         TextView.ContentsChanged += (sender, e) =>
         {
             var lines = TextView.Text?.Split('\n') ?? [];
@@ -125,7 +119,6 @@ public class Dashboard
                 numbers[i] = (i + 1).ToString().PadLeft(4);
         };
 
-        // Bottom status bar showing available keybinds
         StatusBar = new Label()
         {
             Text = " Esc: Quit | Enter: Run | E: Edit | C: Create | D: Delete ",
@@ -135,7 +128,6 @@ public class Dashboard
             ColorScheme = theme.StatusBar(),
         };
 
-        // Edit bar shown in red while the user is actively editing
         EditBarEditing = new Label
         {
             Text = " EDITING | Ctrl+S: Save | Esc: Cancel ",
@@ -146,7 +138,6 @@ public class Dashboard
             Visible = false,
         };
 
-        // Edit bar shown in green after the file has been saved
         EditBarSaved = new Label
         {
             Text = " EDITING | Ctrl+S: Save | Esc: Cancel ",
@@ -157,7 +148,6 @@ public class Dashboard
             Visible = false,
         };
 
-        // Marquee progress bar shown while a script is running
         ProgressBar = new ProgressBar()
         {
             X = 2,
@@ -168,7 +158,6 @@ public class Dashboard
             ProgressBarStyle = ProgressBarStyle.MarqueeContinuous,
         };
 
-        // Left panel: script list
         var sidebar = new FrameView()
         {
             Title = "Scripts",
@@ -179,7 +168,6 @@ public class Dashboard
             Height = Dim.Fill(1),
         };
 
-        // Center panel: script file preview with line numbers
         var preview = new FrameView()
         {
             Title = "Preview",
@@ -190,7 +178,6 @@ public class Dashboard
             Height = Dim.Fill(1),
         };
 
-        // Right panel: script execution output
         var outputFrame = new FrameView()
         {
             Title = "Output",
@@ -201,7 +188,6 @@ public class Dashboard
             Height = Dim.Fill(1),
         };
 
-        // When a script is selected, load its contents into the preview and restore any saved output
         ListView.SelectedItemChanged += (sender, e) =>
         {
             if (e.Item >= 0 && e.Item < scripts.Count)
@@ -212,7 +198,6 @@ public class Dashboard
                 Output.Text = savedOutput ?? "";
                 Output.MoveEnd();
 
-                // Restore staged edit if one exists, otherwise load from disk
                 if (ScriptEdits.TryGetValue(selected.Path!, out var edited))
                     TextView.Text = edited;
                 else
@@ -222,7 +207,6 @@ public class Dashboard
             }
         };
 
-        // Track edits per script in memory as the user types
         TextView.ContentsChanged += (sender, e) =>
         {
             if (ListView.SelectedItem >= 0 && ListView.SelectedItem < scripts.Count)
@@ -233,13 +217,9 @@ public class Dashboard
             }
         };
 
-        // Trigger selection change to load the first script on startup
         if (scripts.Count > 0)
-        {
             ListView.SelectedItem = 0;
-        }
 
-        // On Enter, confirm and execute the selected script, streaming output in real time
         ListView.OpenSelectedItem += async (sender, e) =>
         {
             var selected = scripts[ListView.SelectedItem];
@@ -312,8 +292,6 @@ public class Dashboard
                 }
                 if (!ScriptStatus.ContainsKey(selected.Path!))
                     ScriptStatus[selected.Path!] = "done";
-
-                Application.RemoveTimeout(timer!);
 
                 Application.RemoveTimeout(timer!);
                 cancellations.Remove(selected.Path!);
