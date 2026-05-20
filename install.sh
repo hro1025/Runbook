@@ -42,13 +42,14 @@ install_dotnet() {
     echo 'export DOTNET_ROOT=$HOME/.dotnet' >> ~/.bashrc
     echo 'export PATH=$PATH:$HOME/.dotnet:$HOME/.dotnet/tools' >> ~/.bashrc
     msg_ok "Installed dotnet 10"
-   msg_info "Installing dotnet-script"
-    $HOME/.dotnet/dotnet tool install -g dotnet-script
+    msg_info "Installing dotnet-script"
+    $HOME/.dotnet/dotnet tool install -g dotnet-script &>/dev/null
     msg_ok "Installed dotnet-script"
 }
 
 install_ttyd() {
     msg_info "Installing ttyd"
+    systemctl stop runbook 2>/dev/null || true
     curl -fsSL https://github.com/tsl0922/ttyd/releases/latest/download/ttyd.x86_64 -o /usr/local/bin/ttyd
     chmod +x /usr/local/bin/ttyd
     msg_ok "Installed ttyd"
@@ -56,7 +57,7 @@ install_ttyd() {
 
 install_runbook() {
     msg_info "Installing Runbook $LATEST"
-    curl -fsSL "$BINARY_URL" -o /usr/local/bin/Runbook || msg_err "Failed to download Runbook"
+    curl -L -o /usr/local/bin/Runbook "https://github.com/$REPO/releases/download/$LATEST/Runbook" || msg_err "Failed to download Runbook"
     chmod +x /usr/local/bin/Runbook
     msg_ok "Installed Runbook $LATEST"
 }
