@@ -1,28 +1,11 @@
-# Runbook
-Runbook is a terminal-based script manager. You can execute, edit, create, and delete scripts from a simple TUI interface. Multiple scripts can run simultaneously in the background.
-
-## Installation
-
-### Quick Install (Linux)
+To check the service status:
 ```bash
-curl -fsSL https://raw.githubusercontent.com/Real-Lamafps/Runbook/main/install.sh | bash
+systemctl status runbook
 ```
 
-The install script will automatically install:
-- **dotnet 10** — required to run Runbook
-- **python3** — for running `.py` scripts
-- **ttyd** — lets you access Runbook from a browser
-- **git**, **curl**, **wget** — general dependencies
-- **Runbook binary** — downloaded from the latest release
-
-Supports: Debian/Ubuntu, Arch, Fedora, RHEL/CentOS, openSUSE, Alpine, Void, Gentoo.
-
-### Manual Install
-1. Download `Runbook` from the [releases page](https://github.com/Real-Lamafps/Runbook/releases)
-2. Make it executable and run it:
+To restart it:
 ```bash
-chmod +x Runbook
-./Runbook
+systemctl restart runbook
 ```
 
 ## Dependencies
