@@ -32,7 +32,6 @@ echo ""
 REPO="hro1025/Runbook"
 LATEST=$(curl -fsSL "https://api.github.com/repos/$REPO/releases/latest" | grep '"tag_name"' | head -1 | cut -d'"' -f4)
 LATEST=${LATEST:-v1.0.0}
-BINARY_URL="https://github.com/$REPO/releases/download/$LATEST/Runbook"
 
 install_dotnet() {
     msg_info "Installing dotnet 10"
@@ -43,13 +42,14 @@ install_dotnet() {
     echo 'export PATH=$PATH:$HOME/.dotnet:$HOME/.dotnet/tools' >> ~/.bashrc
     msg_ok "Installed dotnet 10"
     msg_info "Installing dotnet-script"
-    $HOME/.dotnet/dotnet tool install -g dotnet-script &>/dev/null
+    $HOME/.dotnet/dotnet tool install -g dotnet-script &>/dev/null || true
     msg_ok "Installed dotnet-script"
 }
 
 install_ttyd() {
     msg_info "Installing ttyd"
     systemctl stop runbook 2>/dev/null || true
+    sleep 1
     curl -fsSL https://github.com/tsl0922/ttyd/releases/latest/download/ttyd.x86_64 -o /usr/local/bin/ttyd
     chmod +x /usr/local/bin/ttyd
     msg_ok "Installed ttyd"
