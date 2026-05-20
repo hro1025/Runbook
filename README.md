@@ -49,10 +49,3 @@ Scripts are stored in `~/.scripts/runbook/`.
 | `C` | Create script |
 | `D` | Delete script |
 | `Esc` | Quit |
-
-## Browser Access
-If you installed via the install script, ttyd is included. You can run Runbook in the browser:
-```bash
-ttyd --writable Runbook
-```
-Then visit `http://localhost:7681`.
