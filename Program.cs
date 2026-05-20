@@ -35,7 +35,7 @@ static class Program
                     testScript,
                     "#!/bin/bash\necho \"=== Runbook Test Script ===\"\necho \"Runtime: Bash\"\necho \"User: $(whoami)\"\necho \"Host: $(hostname)\"\necho \"OS: $(uname -o)\"\necho \"Uptime: $(uptime -p)\"\necho \"=== Runbook is working correctly ===\""
                 );
-                if (OperatingSystem.IsLinux() || OperatingSystem.IsMacOS())
+                if (OperatingSystem.IsLinux())
                 {
                     File.SetUnixFileMode(
                         testScript,

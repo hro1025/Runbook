@@ -1,5 +1,4 @@
 using System.Diagnostics;
-using System.Runtime.InteropServices;
 using Runbook.Interfaces;
 using Runbook.Models;
 
@@ -13,7 +12,7 @@ public class Executor : IExecutor
         string checker = "";
 
         if (type == ScriptType.Python)
-            checker = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? "python" : "python3";
+            checker = "python3";
 
         if (type == ScriptType.CSharp)
             checker = "dotnet-script";
@@ -49,9 +48,7 @@ public class Executor : IExecutor
         {
             ScriptType.Bash => "bash",
             ScriptType.CSharp => "dotnet-script",
-            ScriptType.Python => RuntimeInformation.IsOSPlatform(OSPlatform.Windows)
-                ? "python"
-                : "python3",
+            ScriptType.Python => "python3",
             _ => throw new NotSupportedException($"Unknown script type: {script.Type}"),
         };
 
