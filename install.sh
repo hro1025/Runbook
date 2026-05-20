@@ -70,6 +70,8 @@ Description=Runbook TUI Script Manager
 After=network.target
 
 [Service]
+Environment=DOTNET_ROOT=/root/.dotnet
+Environment=PATH=/root/.dotnet/tools:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 ExecStart=/usr/local/bin/ttyd --writable /usr/local/bin/Runbook
 Restart=always
 RestartSec=3
