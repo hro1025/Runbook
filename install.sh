@@ -42,6 +42,9 @@ install_dotnet() {
     echo 'export DOTNET_ROOT=$HOME/.dotnet' >> ~/.bashrc
     echo 'export PATH=$PATH:$HOME/.dotnet:$HOME/.dotnet/tools' >> ~/.bashrc
     msg_ok "Installed dotnet 10"
+   msg_info "Installing dotnet-script"
+$HOME/.dotnet/dotnet tool install -g dotnet-script
+msg_ok "Installed dotnet-script"
 }
 
 install_ttyd() {
