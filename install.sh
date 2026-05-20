@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-REPO="Real-Lamafps/Runbook"
+REPO="hro1025/Runbook"
 LATEST=$(curl -fsSL "https://api.github.com/repos/$REPO/releases/latest" | grep '"tag_name"' | cut -d'"' -f4)
 BINARY_URL="https://github.com/$REPO/releases/download/$LATEST/Runbook"
 
