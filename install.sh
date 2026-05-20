@@ -3,8 +3,8 @@ set -e
 
 REPO="hro1025/Runbook"
 LATEST=$(curl -fsSL "https://api.github.com/repos/$REPO/releases/latest" | grep '"tag_name"' | head -1 | cut -d'"' -f4)
+LATEST=${LATEST:-v1.0.0}
 BINARY_URL="https://github.com/$REPO/releases/download/$LATEST/Runbook"
-
 if [ -f /etc/os-release ]; then
 	. /etc/os-release
 	DISTRO=$ID
