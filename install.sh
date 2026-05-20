@@ -91,5 +91,25 @@ nixos)
 	;;
 esac
 
+# Create systemd service
+cat >/etc/systemd/system/runbook.service <<EOF
+[Unit]
+Description=Runbook TUI Script Manager
+After=network.target
+
+[Service]
+ExecStart=/usr/local/bin/ttyd --writable /usr/local/bin/Runbook
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+systemctl daemon-reload
+systemctl enable runbook
+systemctl start runbook
+
+IP=$(hostname -I | awk '{print $1}')
 echo ""
-echo "Done! Run 'Runbook' to start."
+echo "Done! Runbook is running at http://$IP:7681"
