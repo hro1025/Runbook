@@ -5,7 +5,7 @@ Runbook is a terminal-based script manager. You can execute, edit, create, and d
  
 ### Quick Install (Linux)
 ```bash
-curl -fsSL https://raw.githubusercontent.com/Real-Lamafps/Runbook/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/hro1025/Runbook/main/install.sh | bash
 ```
  
 The install script will automatically install:
