@@ -56,7 +56,3 @@ If you installed via the install script, ttyd is included. You can run Runbook i
 ttyd --writable Runbook
 ```
 Then visit `http://localhost:7681`.
-| Key | Action |
-|-----|--------|
-| `Ctrl+S` | Save |
-| `Esc` | Cancel |
