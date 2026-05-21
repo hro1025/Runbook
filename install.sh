@@ -33,6 +33,10 @@ REPO="hro1025/Runbook"
 LATEST=$(curl -fsSL "https://api.github.com/repos/$REPO/releases/latest" | grep '"tag_name"' | head -1 | cut -d'"' -f4)
 LATEST=${LATEST:-v1.0.0}
 
+has_systemd() {
+    command -v systemctl &>/dev/null && pidof systemd &>/dev/null
+}
+
 install_dotnet() {
     msg_info "Installing dotnet 10"
     curl -fsSL https://dot.net/v1/dotnet-install.sh | bash -s -- --channel 10.0 &>/dev/null
@@ -48,7 +52,7 @@ install_dotnet() {
 
 install_ttyd() {
     msg_info "Installing ttyd"
-    systemctl stop runbook 2>/dev/null || true
+    has_systemd && systemctl stop runbook 2>/dev/null || true
     sleep 1
     curl -fsSL https://github.com/tsl0922/ttyd/releases/latest/download/ttyd.x86_64 -o /usr/local/bin/ttyd
     chmod +x /usr/local/bin/ttyd
@@ -63,7 +67,7 @@ install_runbook() {
 }
 
 install_service() {
-    if command -v systemctl &>/dev/null && systemctl is-system-running &>/dev/null 2>&1; then
+    if has_systemd; then
         msg_info "Creating systemd service"
         cat > /etc/systemd/system/runbook.service << EOF
 [Unit]
@@ -84,7 +88,7 @@ EOF
         systemctl enable -q --now runbook
         msg_ok "Created service"
     else
-        msg_ok "Skipping service (no systemd) — run manually with: ttyd --writable Runbook"
+        msg_ok "No systemd — run manually with: ttyd --writable Runbook"
     fi
 }
 
@@ -100,69 +104,91 @@ case $DISTRO in
     ubuntu|debian|linuxmint|pop|elementary|zorin|kali|raspbian)
         msg_ok "Detected $DISTRO"
         msg_info "Installing dependencies"
-        apt update -y &>/dev/null
-        apt install -y curl wget git python3 python3-pip &>/dev/null
+        apt-get update -y &>/dev/null
+        apt-get install -y curl wget git python3 python3-pip &>/dev/null
         msg_ok "Installed dependencies"
-        install_deps ;;
+        install_deps
+        ;;
     arch|manjaro|endeavouros|garuda|artix)
         msg_ok "Detected $DISTRO"
         msg_info "Installing dependencies"
-        pacman -Sy --noconfirm curl wget git python python-pip &>/dev/null
+        pacman-key --init &>/dev/null || true
+        pacman-key --populate &>/dev/null || true
+        pacman -Sy --noconfirm --needed curl wget git python &>/dev/null
         msg_ok "Installed dependencies"
-        install_deps ;;
+        install_deps
+        ;;
     fedora)
         msg_ok "Detected $DISTRO"
         msg_info "Installing dependencies"
         dnf install -y curl wget git python3 python3-pip &>/dev/null
         msg_ok "Installed dependencies"
-        install_deps ;;
+        install_deps
+        ;;
     rhel|centos|almalinux|rocky)
         msg_ok "Detected $DISTRO"
         msg_info "Installing dependencies"
-        dnf install -y curl wget git python3 python3-pip &>/dev/null || yum install -y curl wget git python3 python3-pip &>/dev/null
+        dnf install -y curl wget git python3 python3-pip &>/dev/null || \
+        yum install -y curl wget git python3 python3-pip &>/dev/null
         msg_ok "Installed dependencies"
-        install_deps ;;
+        install_deps
+        ;;
     opensuse*|sles)
         msg_ok "Detected $DISTRO"
         msg_info "Installing dependencies"
         zypper install -y curl wget git python3 python3-pip &>/dev/null
         msg_ok "Installed dependencies"
-        install_deps ;;
+        install_deps
+        ;;
     alpine)
         msg_ok "Detected $DISTRO"
         msg_info "Installing dependencies"
         apk add --no-cache curl wget git python3 py3-pip bash &>/dev/null
         msg_ok "Installed dependencies"
-        install_deps ;;
+        install_deps
+        ;;
     void)
         msg_ok "Detected $DISTRO"
         msg_info "Installing dependencies"
         xbps-install -Sy curl wget git python3 python3-pip &>/dev/null
         msg_ok "Installed dependencies"
-        install_deps ;;
+        install_deps
+        ;;
     gentoo)
         msg_ok "Detected $DISTRO"
         msg_info "Installing dependencies"
         emerge --ask=n net-misc/curl net-misc/wget dev-vcs/git dev-lang/python &>/dev/null
         msg_ok "Installed dependencies"
-        install_deps ;;
+        install_deps
+        ;;
     nixos)
-        msg_err "NixOS is not supported. Install manually via nix-env or home-manager." ;;
+        msg_err "NixOS is not supported. Install manually via nix-env or home-manager."
+        ;;
     *)
         msg_ok "Unknown distro — detecting package manager"
-        if command -v apt &>/dev/null; then apt install -y curl wget git python3 python3-pip &>/dev/null
-        elif command -v pacman &>/dev/null; then pacman -Sy --noconfirm curl wget git python python-pip &>/dev/null
-        elif command -v dnf &>/dev/null; then dnf install -y curl wget git python3 python3-pip &>/dev/null
-        elif command -v zypper &>/dev/null; then zypper install -y curl wget git python3 python3-pip &>/dev/null
-        elif command -v apk &>/dev/null; then apk add --no-cache curl wget git python3 py3-pip &>/dev/null
-        else msg_err "No supported package manager found"
+        if command -v apt-get &>/dev/null; then
+            apt-get update -y &>/dev/null
+            apt-get install -y curl wget git python3 python3-pip &>/dev/null
+        elif command -v pacman &>/dev/null; then
+            pacman-key --init &>/dev/null || true
+            pacman-key --populate &>/dev/null || true
+            pacman -Sy --noconfirm --needed curl wget git python &>/dev/null
+        elif command -v dnf &>/dev/null; then
+            dnf install -y curl wget git python3 python3-pip &>/dev/null
+        elif command -v zypper &>/dev/null; then
+            zypper install -y curl wget git python3 python3-pip &>/dev/null
+        elif command -v apk &>/dev/null; then
+            apk add --no-cache curl wget git python3 py3-pip &>/dev/null
+        else
+            msg_err "No supported package manager found"
         fi
-        install_deps ;;
+        install_deps
+        ;;
 esac
 
-IP=$(hostname -I | awk '{print $1}')
+IP=$(hostname -I 2>/dev/null | awk '{print $1}')
 echo ""
-if command -v systemctl &>/dev/null && systemctl is-active runbook &>/dev/null 2>&1; then
+if has_systemd && systemctl is-active runbook &>/dev/null 2>&1; then
     echo -e "${GREEN}  Runbook is running at http://$IP:7681${NC}"
 else
     echo -e "${GREEN}  Runbook installed! Run with: ttyd --writable Runbook${NC}"
