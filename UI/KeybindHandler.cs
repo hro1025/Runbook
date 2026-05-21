@@ -76,7 +76,12 @@ public class KeybindHandler(
                 }
 
                 isDialogOpen = true;
-                var confirmed2 = confirmDialog.Show("Quit", "Exit Runbook?");
+                var runningCount = scripts.Count(s => executor.IsRunning(s));
+                var quitMessage =
+                    runningCount > 0
+                        ? $"{runningCount} script(s) will keep running."
+                        : "Exit Runbook?";
+                var confirmed2 = confirmDialog.Show("Quit Runbook", quitMessage);
                 isDialogOpen = false;
                 if (confirmed2)
                     Application.RequestStop();

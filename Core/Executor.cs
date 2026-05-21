@@ -4,21 +4,38 @@ using Runbook.Models;
 
 namespace Runbook.Core;
 
-// Handles execution of scripts as external processes
+// Handles execution of scripts as detached background processes
 public class Executor : IExecutor
 {
+    private static readonly string LogDir = Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
+        ".scripts",
+        "runbook",
+        "logs"
+    );
+
+    private static readonly string PidDir = Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
+        ".scripts",
+        "runbook",
+        "pids"
+    );
+
+    public Executor()
+    {
+        Directory.CreateDirectory(LogDir);
+        Directory.CreateDirectory(PidDir);
+    }
+
     public async Task<bool> IsRuntimeAvailable(ScriptType type)
     {
-        string checker = "";
-
-        if (type == ScriptType.Python)
-            checker = "python3";
-
-        if (type == ScriptType.CSharp)
-            checker = "dotnet-script";
-
-        if (type == ScriptType.Bash)
-            checker = "bash";
+        string checker = type switch
+        {
+            ScriptType.Python => "python3",
+            ScriptType.CSharp => "dotnet-script",
+            ScriptType.Bash => "bash",
+            _ => "",
+        };
 
         try
         {
@@ -37,14 +54,55 @@ public class Executor : IExecutor
         }
     }
 
+    public bool IsRunning(Script script)
+    {
+        string pidFile = PidFile(script);
+        if (!File.Exists(pidFile))
+            return false;
+
+        string pidText = File.ReadAllText(pidFile).Trim();
+        if (!int.TryParse(pidText, out int pid))
+            return false;
+
+        try
+        {
+            var p = Process.GetProcessById(pid);
+            return !p.HasExited;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    public void Kill(Script script)
+    {
+        string pidFile = PidFile(script);
+        if (!File.Exists(pidFile))
+            return;
+
+        string pidText = File.ReadAllText(pidFile).Trim();
+        if (!int.TryParse(pidText, out int pid))
+            return;
+
+        try
+        {
+            var p = Process.GetProcessById(pid);
+            p.Kill(entireProcessTree: true);
+        }
+        catch { }
+
+        File.Delete(pidFile);
+    }
+
     public async Task Execute(
         Script script,
         Action<string> onOutput,
-        CancellationToken cancellationToken
+        CancellationToken cancellationToken,
+        bool reattach = false
     )
     {
-        // Determine the runner based on script type
-        string execute = script.Type switch
+        string runner = script.Type switch
         {
             ScriptType.Bash => "bash",
             ScriptType.CSharp => "dotnet-script",
@@ -52,49 +110,100 @@ public class Executor : IExecutor
             _ => throw new NotSupportedException($"Unknown script type: {script.Type}"),
         };
 
-        // Check if the required runtime is installed
-        if (!await IsRuntimeAvailable(script.Type))
+        string logFile = LogFile(script);
+        string pidFile = PidFile(script);
+
+        if (!reattach)
         {
-            throw new Exception(
-                $"'{execute}' is not installed or not in PATH.\nPlease install it to run this script."
-            );
+            // Fresh run — check runtime, clear log, launch process
+            if (!await IsRuntimeAvailable(script.Type))
+            {
+                throw new Exception(
+                    $"'{runner}' is not installed or not in PATH.\nPlease install it to run this script."
+                );
+            }
+
+            File.WriteAllText(logFile, "");
+
+            string args =
+                script.Type == ScriptType.Python ? $"-u \"{script.Path}\"" : $"\"{script.Path}\"";
+
+            string shellCmd = $"{runner} {args} >> \"{logFile}\" 2>&1 & echo $!";
+
+            var launcher = new Process();
+            launcher.StartInfo.FileName = "bash";
+            launcher.StartInfo.Arguments = $"-c \"{shellCmd.Replace("\"", "\\\"")}\"";
+            launcher.StartInfo.RedirectStandardOutput = true;
+            launcher.StartInfo.UseShellExecute = false;
+            launcher.Start();
+
+            string pidText = (await launcher.StandardOutput.ReadToEndAsync()).Trim();
+            await launcher.WaitForExitAsync();
+
+            File.WriteAllText(pidFile, pidText);
         }
 
-        // Set up the process with the correct runner and script path
-        var process = new Process();
-        process.StartInfo.FileName = execute;
-        process.StartInfo.Arguments =
-            script.Type == ScriptType.Python ? $"-u \"{script.Path}\"" : $"\"{script.Path}\"";
-        process.StartInfo.RedirectStandardOutput = true;
-        process.StartInfo.RedirectStandardError = true;
-        process.StartInfo.UseShellExecute = false;
+        // Tail the log file and stream output
+        await TailLog(logFile, pidFile, onOutput, cancellationToken);
+    }
 
-        // Stream stdout and stderr lines back via the onOutput callback
-        process.OutputDataReceived += (sender, e) =>
+    private async Task TailLog(
+        string logFile,
+        string pidFile,
+        Action<string> onOutput,
+        CancellationToken cancellationToken
+    )
+    {
+        // Wait for log file to exist
+        int wait = 0;
+        while (!File.Exists(logFile) && wait < 50)
         {
-            if (e.Data != null)
-                onOutput(e.Data);
-        };
-        process.ErrorDataReceived += (sender, e) =>
-        {
-            if (e.Data != null)
-                onOutput(e.Data);
-        };
+            await Task.Delay(100, cancellationToken);
+            wait++;
+        }
 
-        // Start the process and wait for it to finish
-        process.Start();
-        process.BeginOutputReadLine();
-        process.BeginErrorReadLine();
+        using var reader = new StreamReader(
+            new FileStream(logFile, FileMode.Open, FileAccess.Read, FileShare.ReadWrite)
+        );
+
+        while (!cancellationToken.IsCancellationRequested)
+        {
+            string? line = await reader.ReadLineAsync();
+            if (line != null)
+            {
+                onOutput(line);
+            }
+            else
+            {
+                if (!IsRunningByPidFile(pidFile))
+                    break;
+
+                await Task.Delay(100, cancellationToken);
+            }
+        }
+    }
+
+    private bool IsRunningByPidFile(string pidFile)
+    {
+        if (!File.Exists(pidFile))
+            return false;
+        string pidText = File.ReadAllText(pidFile).Trim();
+        if (!int.TryParse(pidText, out int pid))
+            return false;
         try
         {
-            await process.WaitForExitAsync(cancellationToken);
+            var p = Process.GetProcessById(pid);
+            return !p.HasExited;
         }
-        catch (OperationCanceledException)
+        catch
         {
-            process.Kill(entireProcessTree: true);
-            throw;
+            return false;
         }
-        if (process.ExitCode != 0)
-            throw new Exception($"Script exited with code {process.ExitCode}");
     }
+
+    private string LogFile(Script script) =>
+        Path.Combine(LogDir, $"{Path.GetFileName(script.Path)}.log");
+
+    private string PidFile(Script script) =>
+        Path.Combine(PidDir, $"{Path.GetFileName(script.Path)}.pid");
 }

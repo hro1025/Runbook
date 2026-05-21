@@ -66,6 +66,13 @@ public class Dashboard
         MessageDialog messageDialog
     )
     {
+        // ── Restore running state from pid files on startup ──────────
+        foreach (var script in scripts)
+        {
+            if (executor.IsRunning(script))
+                runningScripts.Add(script.Path!);
+        }
+
         Window = new Window
         {
             Title = "",
@@ -220,6 +227,56 @@ public class Dashboard
         if (scripts.Count > 0)
             ListView.SelectedItem = 0;
 
+        // ── Refresh running status and reattach tails on startup ─────
+        Application.Invoke(() => RefreshDisplayNames(scripts, null));
+
+        foreach (var script in scripts)
+        {
+            if (executor.IsRunning(script))
+            {
+                ScriptOutputs[script.Path!] = "";
+                var cts = new CancellationTokenSource();
+                cancellations[script.Path!] = cts;
+                var capturedScript = script;
+
+                _ = Task.Run(async () =>
+                {
+                    try
+                    {
+                        await executor.Execute(
+                            capturedScript,
+                            line =>
+                            {
+                                Application.Invoke(() =>
+                                {
+                                    ScriptOutputs[capturedScript.Path!] += line + "\n";
+                                    if (
+                                        ListView.SelectedItem >= 0
+                                        && ListView.SelectedItem < scripts.Count
+                                        && scripts[ListView.SelectedItem].Path
+                                            == capturedScript.Path
+                                    )
+                                    {
+                                        Output.Text = ScriptOutputs[capturedScript.Path!];
+                                        Output.MoveEnd();
+                                    }
+                                });
+                            },
+                            cts.Token,
+                            reattach: true
+                        );
+                    }
+                    catch { }
+                    finally
+                    {
+                        runningScripts.Remove(capturedScript.Path!);
+                        cancellations.Remove(capturedScript.Path!);
+                        Application.Invoke(() => RefreshDisplayNames(scripts, null));
+                    }
+                });
+            }
+        }
+
         ListView.OpenSelectedItem += async (sender, e) =>
         {
             var selected = scripts[ListView.SelectedItem];
@@ -230,8 +287,15 @@ public class Dashboard
                     "Already running",
                     "Do you want to stop the Script?"
                 );
-                if (stop && cancellations.TryGetValue(selected.Path!, out var existingCts))
-                    existingCts.Cancel();
+                if (stop)
+                {
+                    executor.Kill(selected);
+                    if (cancellations.TryGetValue(selected.Path!, out var existingCts))
+                        existingCts.Cancel();
+                    runningScripts.Remove(selected.Path!);
+                    cancellations.Remove(selected.Path!);
+                    Application.Invoke(() => RefreshDisplayNames(scripts, null));
+                }
                 return;
             }
 
@@ -290,6 +354,7 @@ public class Dashboard
                     Application.Invoke(() => messageDialog.Show("Error", ex.Message));
                     ScriptStatus[selected.Path!] = "error";
                 }
+
                 if (!ScriptStatus.ContainsKey(selected.Path!))
                     ScriptStatus[selected.Path!] = "done";
 
