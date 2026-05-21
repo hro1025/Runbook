@@ -52,6 +52,17 @@ has_systemd() {
     command -v systemctl &>/dev/null && pidof systemd &>/dev/null
 }
 
+stop_service() {
+    if has_systemd; then
+        if $IS_ROOT; then
+            systemctl stop runbook 2>/dev/null || true
+        else
+            systemctl --user stop runbook 2>/dev/null || true
+        fi
+        sleep 1
+    fi
+}
+
 pkg_install() {
     if $IS_ROOT; then
         "$@"
@@ -104,17 +115,6 @@ zypper_pkg() {
     fi
 }
 
-apk_pkg() {
-    local pkg=$1
-    if apk info -e "$pkg" &>/dev/null 2>&1; then
-        msg_skip "$pkg"
-    else
-        msg_info "Installing $pkg"
-        pkg_install apk add --no-cache "$pkg" &>/dev/null
-        msg_ok "Installed $pkg"
-    fi
-}
-
 # ── Installers ─────────────────────────────────────────────────
 install_dotnet() {
     msg_section "dotnet"
@@ -145,11 +145,7 @@ install_ttyd() {
         msg_skip "ttyd ($(ttyd --version 2>&1 | head -1))"
     else
         msg_info "Installing ttyd"
-        if has_systemd; then
-            systemctl stop runbook 2>/dev/null || true
-            systemctl --user stop runbook 2>/dev/null || true
-            sleep 1
-        fi
+        stop_service
         curl -fsSL https://github.com/tsl0922/ttyd/releases/latest/download/ttyd.x86_64 -o "$BIN_DIR/ttyd"
         chmod +x "$BIN_DIR/ttyd"
         msg_ok "Installed ttyd"
@@ -158,12 +154,7 @@ install_ttyd() {
 
 install_runbook() {
     msg_section "Runbook"
-    # Stop service before overwriting binary
-    if has_systemd; then
-        systemctl stop runbook 2>/dev/null || true
-        systemctl --user stop runbook 2>/dev/null || true
-        sleep 1
-    fi
+    stop_service
     if [ -f "$BIN_DIR/Runbook" ]; then
         msg_info "Updating Runbook to $LATEST"
     else
@@ -172,7 +163,6 @@ install_runbook() {
     curl -L -o "$BIN_DIR/Runbook" "https://github.com/$REPO/releases/download/$LATEST/Runbook" || msg_err "Failed to download Runbook"
     chmod +x "$BIN_DIR/Runbook"
     msg_ok "Installed Runbook $LATEST"
-    msg_ok "Run directly in terminal with: Runbook"
 }
 
 install_service() {
@@ -257,66 +247,20 @@ case $DISTRO in
         for pkg in curl wget git python3 python3-pip; do dnf_pkg "$pkg"; done
         install_deps
         ;;
-    rhel|centos|almalinux|rocky)
-        msg_ok "Detected $DISTRO"
-        msg_section "Dependencies"
-        for pkg in curl wget git python3 python3-pip; do dnf_pkg "$pkg"; done
-        install_deps
-        ;;
     opensuse*|sles)
         msg_ok "Detected $DISTRO"
         msg_section "Dependencies"
         for pkg in curl wget git python3 python3-pip; do zypper_pkg "$pkg"; done
         install_deps
         ;;
-    alpine)
-        msg_ok "Detected $DISTRO"
-        msg_section "Dependencies"
-        for pkg in curl wget git python3 py3-pip bash; do apk_pkg "$pkg"; done
-        install_deps
-        ;;
-    void)
-        msg_ok "Detected $DISTRO"
-        msg_section "Dependencies"
-        msg_info "Installing dependencies"
-        pkg_install xbps-install -Sy curl wget git python3 python3-pip &>/dev/null
-        msg_ok "Installed dependencies"
-        install_deps
-        ;;
-    gentoo)
-        msg_ok "Detected $DISTRO"
-        msg_section "Dependencies"
-        msg_info "Installing dependencies"
-        pkg_install emerge --ask=n net-misc/curl net-misc/wget dev-vcs/git dev-lang/python &>/dev/null
-        msg_ok "Installed dependencies"
-        install_deps
-        ;;
-    nixos)
-        msg_err "NixOS is not supported. Install manually via nix-env or home-manager."
-        ;;
     *)
-        msg_ok "Unknown distro — detecting package manager"
-        msg_section "Dependencies"
-        if command -v apt-get &>/dev/null; then
-            pkg_install apt-get update -y &>/dev/null
-            for pkg in curl wget git python3 python3-pip; do apt_pkg "$pkg"; done
-        elif command -v pacman &>/dev/null; then
-            for pkg in curl wget git python; do pacman_pkg "$pkg"; done
-        elif command -v dnf &>/dev/null; then
-            for pkg in curl wget git python3 python3-pip; do dnf_pkg "$pkg"; done
-        elif command -v zypper &>/dev/null; then
-            for pkg in curl wget git python3 python3-pip; do zypper_pkg "$pkg"; done
-        elif command -v apk &>/dev/null; then
-            for pkg in curl wget git python3 py3-pip; do apk_pkg "$pkg"; done
-        else
-            msg_err "No supported package manager found"
-        fi
-        install_deps
+        msg_err "Unsupported distro: $DISTRO. Supported: Debian/Ubuntu, Arch, Fedora, openSUSE."
         ;;
 esac
 
 # ── Done ───────────────────────────────────────────────────────
 IP=$(hostname -I 2>/dev/null | awk '{print $1}')
+echo ""
 msg_section "Done"
 if $IS_ROOT && has_systemd && systemctl is-active runbook &>/dev/null 2>&1; then
     echo -e "${GREEN}  ✓ Runbook is running at http://$IP:7681${NC}"
