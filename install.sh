@@ -42,6 +42,15 @@ echo -e "${NC}"
 echo -e "  Terminal-based script manager | https://github.com/hro1025/Runbook"
 echo ""
 
+# ── Ask about browser access ───────────────────────────────────
+echo -e "${BLUE}  ── Setup ──${NC}"
+read -rp "  Do you want browser access via ttyd? [y/N] " BROWSER_ACCESS
+case "$BROWSER_ACCESS" in
+    [yY][eE][sS]|[yY]) INSTALL_TTYD=true ;;
+    *) INSTALL_TTYD=false ;;
+esac
+echo ""
+
 # ── Config ─────────────────────────────────────────────────────
 REPO="hro1025/Runbook"
 LATEST=$(curl -fsSL "https://api.github.com/repos/$REPO/releases/latest" | grep '"tag_name"' | head -1 | cut -d'"' -f4)
@@ -168,7 +177,7 @@ install_runbook() {
 install_service() {
     msg_section "Service"
     if ! has_systemd; then
-        msg_ok "No systemd found — run manually: ttyd --writable -R Runbook"
+        msg_ok "No systemd found — run manually: ttyd --writable Runbook"
         return
     fi
 
@@ -182,7 +191,7 @@ After=network.target
 [Service]
 Environment=DOTNET_ROOT=/root/.dotnet
 Environment=PATH=/root/.dotnet/tools:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
-ExecStart=$BIN_DIR/ttyd --writable -R $BIN_DIR/Runbook
+ExecStart=$BIN_DIR/ttyd --writable $BIN_DIR/Runbook
 Restart=always
 RestartSec=3
 
@@ -203,7 +212,7 @@ After=default.target
 [Service]
 Environment=DOTNET_ROOT=$HOME/.dotnet
 Environment=PATH=$HOME/.dotnet/tools:$HOME/.local/bin:/usr/local/bin:/usr/bin:/bin
-ExecStart=$BIN_DIR/ttyd --writable -R $BIN_DIR/Runbook
+ExecStart=$BIN_DIR/ttyd --writable $BIN_DIR/Runbook
 Restart=always
 RestartSec=3
 
@@ -218,9 +227,18 @@ EOF
 
 install_deps() {
     install_dotnet
-    install_ttyd
+    if $INSTALL_TTYD; then
+        install_ttyd
+    fi
     install_runbook
-    install_service
+    if $INSTALL_TTYD; then
+        install_service
+    else
+        # Add to PATH if not root
+        if ! echo "$PATH" | grep -q "$BIN_DIR"; then
+            echo "export PATH=\"\$PATH:$BIN_DIR\"" >> ~/.bashrc
+        fi
+    fi
 }
 
 # ── Distro detection & package install ────────────────────────
@@ -262,13 +280,17 @@ esac
 IP=$(hostname -I 2>/dev/null | awk '{print $1}')
 echo ""
 msg_section "Done"
-if $IS_ROOT && has_systemd && systemctl is-active runbook &>/dev/null 2>&1; then
-    echo -e "${GREEN}  ✓ Runbook is running at http://$IP:7681${NC}"
-elif ! $IS_ROOT && has_systemd && systemctl --user is-active runbook &>/dev/null 2>&1; then
-    echo -e "${GREEN}  ✓ Runbook is running at http://localhost:7681${NC}"
-else
-    echo -e "${YELLOW}  ⟳ Run in browser: ttyd --writable -R Runbook${NC}"
+if $INSTALL_TTYD; then
+    if $IS_ROOT && has_systemd && systemctl is-active runbook &>/dev/null 2>&1; then
+        echo -e "${GREEN}  ✓ Runbook is running at http://$IP:7681${NC}"
+    elif ! $IS_ROOT && has_systemd && systemctl --user is-active runbook &>/dev/null 2>&1; then
+        echo -e "${GREEN}  ✓ Runbook is running at http://localhost:7681${NC}"
+    else
+        echo -e "${YELLOW}  ⟳ Run in browser: ttyd --writable Runbook${NC}"
+    fi
+fi
+echo -e "${GREEN}  ✓ Run in terminal: Runbook${NC}"
+if ! $INSTALL_TTYD; then
     echo -e "${YELLOW}  ⟳ Restart terminal or: source ~/.bashrc${NC}"
 fi
-echo -e "${CYAN}  ↷ Run in terminal: Runbook${NC}"
 echo ""
