@@ -189,7 +189,7 @@ After=network.target
 [Service]
 Environment=DOTNET_ROOT=/root/.dotnet
 Environment=PATH=/root/.dotnet/tools:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
-ExecStart=$BIN_DIR/ttyd --writable $BIN_DIR/Runbook
+ExecStart=/usr/local/bin/ttyd --writable -R /usr/local/bin/Runbook
 Restart=always
 RestartSec=3
 
