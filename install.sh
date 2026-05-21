@@ -46,12 +46,12 @@ echo ""
 echo -e "${BLUE}  ── Setup ──${NC}"
 echo -ne "  Do you want browser access via ttyd? [y/N] "
 read -r BROWSER_ACCESS </dev/tty
-if [[ "$BROWSER_ACCESS" =~ ^[yY] ]]; then
-    INSTALL_TTYD=true
-else
-    INSTALL_TTYD=false
-fi
+case "$BROWSER_ACCESS" in
+    y|Y|yes|YES|Yes) INSTALL_TTYD=true ;;
+    *) INSTALL_TTYD=false ;;
+esac
 echo ""
+
 # ── Config ─────────────────────────────────────────────────────
 REPO="hro1025/Runbook"
 LATEST=$(curl -fsSL "https://api.github.com/repos/$REPO/releases/latest" | grep '"tag_name"' | head -1 | cut -d'"' -f4)
