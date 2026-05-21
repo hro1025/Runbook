@@ -1,4 +1,5 @@
 #!/bin/bash
+
 # Colors
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -32,7 +33,7 @@ LATEST=$(curl -fsSL "https://api.github.com/repos/$REPO/releases/latest" | grep 
 LATEST=${LATEST:-v1.0.0}
 
 has_systemd() {
-    command -v systemctl &>/dev/null && pidof systemd 
+    command -v systemctl &>/dev/null && pidof systemd &>/dev/null
 }
 
 install_dotnet() {
@@ -50,8 +51,10 @@ install_dotnet() {
 
 install_ttyd() {
     msg_info "Installing ttyd"
-    has_systemd && systemctl stop runbook 2>/dev/null || true
-    sleep 1
+    if has_systemd; then
+        systemctl stop runbook 2>/dev/null || true
+        sleep 1
+    fi
     curl -fsSL https://github.com/tsl0922/ttyd/releases/latest/download/ttyd.x86_64 -o /usr/local/bin/ttyd
     chmod +x /usr/local/bin/ttyd
     msg_ok "Installed ttyd"
@@ -97,6 +100,13 @@ install_deps() {
     install_service
 }
 
+install_arch_deps() {
+    msg_info "Installing dependencies"
+    pacman -Sy --noconfirm --needed curl wget git python
+    msg_ok "Installed dependencies"
+    install_deps
+}
+
 msg_info "Detecting system"
 case $DISTRO in
     ubuntu|debian|linuxmint|pop|elementary|zorin|kali|raspbian)
@@ -107,13 +117,9 @@ case $DISTRO in
         msg_ok "Installed dependencies"
         install_deps
         ;;
-arch|manjaro|endeavouros|garuda|artix)
-    msg_ok "Detected $DISTRO"
-    msg_info "Installing dependencies"
-    pacman -Sy --noconfirm --needed curl wget git python 2>&1 | tail -1
-    msg_ok "Installed dependencies"
-    install_deps
-    ;;
+    arch|manjaro|endeavouros|garuda|artix)
+        msg_ok "Detected $DISTRO"
+        install_arch_deps
         ;;
     fedora)
         msg_ok "Detected $DISTRO"
@@ -167,9 +173,7 @@ arch|manjaro|endeavouros|garuda|artix)
             apt-get update -y &>/dev/null
             apt-get install -y curl wget git python3 python3-pip &>/dev/null
         elif command -v pacman &>/dev/null; then
-            pacman-key --init &>/dev/null || true
-            pacman-key --populate &>/dev/null || true
-            pacman -Sy --noconfirm --needed curl wget git python &>/dev/null
+            pacman -Sy --noconfirm --needed curl wget git python
         elif command -v dnf &>/dev/null; then
             dnf install -y curl wget git python3 python3-pip &>/dev/null
         elif command -v zypper &>/dev/null; then
