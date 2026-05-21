@@ -174,12 +174,11 @@ install_runbook() {
 install_service() {
     msg_section "Service"
     if ! has_systemd; then
-        msg_ok "No systemd found — run manually: ttyd --writable Runbook"
+        msg_ok "No systemd found — run manually: ttyd --writable -R Runbook"
         return
     fi
 
     if $IS_ROOT; then
-        # System-wide service
         msg_info "Creating system systemd service"
         cat > /etc/systemd/system/runbook.service << EOF
 [Unit]
@@ -189,7 +188,7 @@ After=network.target
 [Service]
 Environment=DOTNET_ROOT=/root/.dotnet
 Environment=PATH=/root/.dotnet/tools:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
-ExecStart=/usr/local/bin/ttyd --writable -R /usr/local/bin/Runbook
+ExecStart=$BIN_DIR/ttyd --writable -R $BIN_DIR/Runbook
 Restart=always
 RestartSec=3
 
@@ -200,7 +199,6 @@ EOF
         systemctl enable -q --now runbook
         msg_ok "Created system service (starts on boot)"
     else
-        # User-level service
         msg_info "Creating user systemd service"
         mkdir -p "$HOME/.config/systemd/user"
         cat > "$HOME/.config/systemd/user/runbook.service" << EOF
@@ -211,7 +209,7 @@ After=default.target
 [Service]
 Environment=DOTNET_ROOT=$HOME/.dotnet
 Environment=PATH=$HOME/.dotnet/tools:$HOME/.local/bin:/usr/local/bin:/usr/bin:/bin
-ExecStart=$BIN_DIR/ttyd --writable $BIN_DIR/Runbook
+ExecStart=$BIN_DIR/ttyd --writable -R $BIN_DIR/Runbook
 Restart=always
 RestartSec=3
 
@@ -323,7 +321,7 @@ elif ! $IS_ROOT && has_systemd && systemctl --user is-active runbook &>/dev/null
     echo -e "${GREEN}  ✓ Runbook is running at http://localhost:7681${NC}"
 else
     echo -e "${GREEN}  ✓ Runbook installed at $BIN_DIR/Runbook${NC}"
-    echo -e "${YELLOW}  ⟳ Run with: ttyd --writable Runbook${NC}"
+    echo -e "${YELLOW}  ⟳ Run with: ttyd --writable -R Runbook${NC}"
     echo -e "${YELLOW}  ⟳ Restart terminal or: source ~/.bashrc${NC}"
 fi
 echo ""
