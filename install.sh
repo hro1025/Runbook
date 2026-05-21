@@ -60,7 +60,6 @@ pkg_install() {
     fi
 }
 
-# Check and install a single package (apt)
 apt_pkg() {
     local pkg=$1
     if dpkg -s "$pkg" &>/dev/null 2>&1; then
@@ -72,7 +71,6 @@ apt_pkg() {
     fi
 }
 
-# Check and install a single package (pacman)
 pacman_pkg() {
     local pkg=$1
     if pacman -Q "$pkg" &>/dev/null 2>&1; then
@@ -84,7 +82,6 @@ pacman_pkg() {
     fi
 }
 
-# Check and install a single package (dnf)
 dnf_pkg() {
     local pkg=$1
     if rpm -q "$pkg" &>/dev/null 2>&1; then
@@ -96,7 +93,6 @@ dnf_pkg() {
     fi
 }
 
-# Check and install a single package (zypper)
 zypper_pkg() {
     local pkg=$1
     if rpm -q "$pkg" &>/dev/null 2>&1; then
@@ -108,7 +104,6 @@ zypper_pkg() {
     fi
 }
 
-# Check and install a single package (apk)
 apk_pkg() {
     local pkg=$1
     if apk info -e "$pkg" &>/dev/null 2>&1; then
@@ -151,7 +146,11 @@ install_ttyd() {
     else
         msg_info "Installing ttyd"
         if has_systemd; then
-            pkg_install systemctl stop runbook 2>/dev/null || true
+            if $IS_ROOT; then
+                systemctl stop runbook 2>/dev/null || true
+            else
+                systemctl --user stop runbook 2>/dev/null || true
+            fi
             sleep 1
         fi
         curl -fsSL https://github.com/tsl0922/ttyd/releases/latest/download/ttyd.x86_64 -o "$BIN_DIR/ttyd"
@@ -174,8 +173,14 @@ install_runbook() {
 
 install_service() {
     msg_section "Service"
-    if $IS_ROOT && has_systemd; then
-        msg_info "Creating systemd service"
+    if ! has_systemd; then
+        msg_ok "No systemd found — run manually: ttyd --writable Runbook"
+        return
+    fi
+
+    if $IS_ROOT; then
+        # System-wide service
+        msg_info "Creating system systemd service"
         cat > /etc/systemd/system/runbook.service << EOF
 [Unit]
 Description=Runbook TUI Script Manager
@@ -193,13 +198,29 @@ WantedBy=multi-user.target
 EOF
         systemctl daemon-reload
         systemctl enable -q --now runbook
-        msg_ok "Created systemd service"
+        msg_ok "Created system service (starts on boot)"
     else
-        if ! echo "$PATH" | grep -q "$BIN_DIR"; then
-            echo "export PATH=\"\$PATH:$BIN_DIR\"" >> ~/.bashrc
-        fi
-        msg_ok "Skipping service (no systemd or not root)"
-        msg_ok "Run manually: ttyd --writable Runbook"
+        # User-level service
+        msg_info "Creating user systemd service"
+        mkdir -p "$HOME/.config/systemd/user"
+        cat > "$HOME/.config/systemd/user/runbook.service" << EOF
+[Unit]
+Description=Runbook TUI Script Manager
+After=default.target
+
+[Service]
+Environment=DOTNET_ROOT=$HOME/.dotnet
+Environment=PATH=$HOME/.dotnet/tools:$HOME/.local/bin:/usr/local/bin:/usr/bin:/bin
+ExecStart=$BIN_DIR/ttyd --writable $BIN_DIR/Runbook
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=default.target
+EOF
+        systemctl --user daemon-reload
+        systemctl --user enable --now runbook 2>/dev/null || true
+        msg_ok "Created user service (starts on login)"
     fi
 }
 
@@ -295,9 +316,11 @@ esac
 # ── Done ───────────────────────────────────────────────────────
 IP=$(hostname -I 2>/dev/null | awk '{print $1}')
 echo ""
-echo -e "${BLUE}  ── Done ──${NC}"
+msg_section "Done"
 if $IS_ROOT && has_systemd && systemctl is-active runbook &>/dev/null 2>&1; then
     echo -e "${GREEN}  ✓ Runbook is running at http://$IP:7681${NC}"
+elif ! $IS_ROOT && has_systemd && systemctl --user is-active runbook &>/dev/null 2>&1; then
+    echo -e "${GREEN}  ✓ Runbook is running at http://localhost:7681${NC}"
 else
     echo -e "${GREEN}  ✓ Runbook installed at $BIN_DIR/Runbook${NC}"
     echo -e "${YELLOW}  ⟳ Run with: ttyd --writable Runbook${NC}"
