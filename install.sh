@@ -43,14 +43,15 @@ echo -e "  Terminal-based script manager | https://github.com/hro1025/Runbook"
 echo ""
 
 # ── Ask about browser access ───────────────────────────────────
-echo -e "${BLUE}  ── Setup ──${NC}"
-echo -ne "  Do you want browser access via ttyd? [y/N] "
-read -r BROWSER_ACCESS </dev/tty
-case "$BROWSER_ACCESS" in
-    y|Y|yes|YES|Yes) INSTALL_TTYD=true ;;
-    *) INSTALL_TTYD=false ;;
-esac
-echo ""
+while true; do
+    echo -ne "  Do you want browser access via ttyd? [y/N] "
+    read -r BROWSER_ACCESS </dev/tty
+    case "$BROWSER_ACCESS" in
+        y|Y|yes|YES|Yes) INSTALL_TTYD=true; break ;;
+        n|N|no|NO|No|"") INSTALL_TTYD=false; break ;;
+        *) echo -e "${RED}  ✗ Invalid input. Please enter y or n.${NC}" ;;
+    esac
+done
 
 # ── Config ─────────────────────────────────────────────────────
 REPO="hro1025/Runbook"
