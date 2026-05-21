@@ -17,6 +17,16 @@ if [ -f /etc/os-release ]; then
     DISTRO=$ID
 fi
 
+# Detect root vs user
+if [ "$EUID" -eq 0 ]; then
+    BIN_DIR="/usr/local/bin"
+    IS_ROOT=true
+else
+    BIN_DIR="$HOME/.local/bin"
+    mkdir -p "$BIN_DIR"
+    IS_ROOT=false
+fi
+
 echo -e "${BLUE}"
 echo "  ██████╗ ██╗   ██╗███╗   ██╗██████╗  ██████╗  ██████╗ ██╗  ██╗"
 echo "  ██╔══██╗██║   ██║████╗  ██║██╔══██╗██╔═══██╗██╔═══██╗██║ ██╔╝"
@@ -36,6 +46,14 @@ has_systemd() {
     command -v systemctl &>/dev/null && pidof systemd &>/dev/null
 }
 
+pkg_install() {
+    if $IS_ROOT; then
+        "$@"
+    else
+        sudo "$@"
+    fi
+}
+
 install_dotnet() {
     msg_info "Installing dotnet 10"
     curl -fsSL https://dot.net/v1/dotnet-install.sh | bash -s -- --channel 10.0 &>/dev/null
@@ -52,23 +70,23 @@ install_dotnet() {
 install_ttyd() {
     msg_info "Installing ttyd"
     if has_systemd; then
-        systemctl stop runbook 2>/dev/null || true
+        pkg_install systemctl stop runbook 2>/dev/null || true
         sleep 1
     fi
-    curl -fsSL https://github.com/tsl0922/ttyd/releases/latest/download/ttyd.x86_64 -o /usr/local/bin/ttyd
-    chmod +x /usr/local/bin/ttyd
+    curl -fsSL https://github.com/tsl0922/ttyd/releases/latest/download/ttyd.x86_64 -o "$BIN_DIR/ttyd"
+    chmod +x "$BIN_DIR/ttyd"
     msg_ok "Installed ttyd"
 }
 
 install_runbook() {
     msg_info "Installing Runbook $LATEST"
-    curl -L -o /usr/local/bin/Runbook "https://github.com/$REPO/releases/download/$LATEST/Runbook" || msg_err "Failed to download Runbook"
-    chmod +x /usr/local/bin/Runbook
+    curl -L -o "$BIN_DIR/Runbook" "https://github.com/$REPO/releases/download/$LATEST/Runbook" || msg_err "Failed to download Runbook"
+    chmod +x "$BIN_DIR/Runbook"
     msg_ok "Installed Runbook $LATEST"
 }
 
 install_service() {
-    if has_systemd; then
+    if $IS_ROOT && has_systemd; then
         msg_info "Creating systemd service"
         cat > /etc/systemd/system/runbook.service << EOF
 [Unit]
@@ -78,7 +96,7 @@ After=network.target
 [Service]
 Environment=DOTNET_ROOT=/root/.dotnet
 Environment=PATH=/root/.dotnet/tools:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
-ExecStart=/usr/local/bin/ttyd --writable /usr/local/bin/Runbook
+ExecStart=$BIN_DIR/ttyd --writable $BIN_DIR/Runbook
 Restart=always
 RestartSec=3
 
@@ -89,7 +107,11 @@ EOF
         systemctl enable -q --now runbook
         msg_ok "Created service"
     else
-        msg_ok "No systemd — run manually with: ttyd --writable Runbook"
+        # Add to PATH if not root
+        if ! echo "$PATH" | grep -q "$BIN_DIR"; then
+            echo "export PATH=\"\$PATH:$BIN_DIR\"" >> ~/.bashrc
+        fi
+        msg_ok "No systemd or not root — run manually with: ttyd --writable Runbook"
     fi
 }
 
@@ -102,7 +124,7 @@ install_deps() {
 
 install_arch_deps() {
     msg_info "Installing dependencies"
-    pacman -Sy --noconfirm --needed curl wget git python
+    pkg_install pacman -Sy --noconfirm --needed curl wget git python
     msg_ok "Installed dependencies"
     install_deps
 }
@@ -112,8 +134,8 @@ case $DISTRO in
     ubuntu|debian|linuxmint|pop|elementary|zorin|kali|raspbian)
         msg_ok "Detected $DISTRO"
         msg_info "Installing dependencies"
-        apt-get update -y &>/dev/null
-        apt-get install -y curl wget git python3 python3-pip &>/dev/null
+        pkg_install apt-get update -y &>/dev/null
+        pkg_install apt-get install -y curl wget git python3 python3-pip &>/dev/null
         msg_ok "Installed dependencies"
         install_deps
         ;;
@@ -124,43 +146,43 @@ case $DISTRO in
     fedora)
         msg_ok "Detected $DISTRO"
         msg_info "Installing dependencies"
-        dnf install -y curl wget git python3 python3-pip &>/dev/null
+        pkg_install dnf install -y curl wget git python3 python3-pip &>/dev/null
         msg_ok "Installed dependencies"
         install_deps
         ;;
     rhel|centos|almalinux|rocky)
         msg_ok "Detected $DISTRO"
         msg_info "Installing dependencies"
-        dnf install -y curl wget git python3 python3-pip &>/dev/null || \
-        yum install -y curl wget git python3 python3-pip &>/dev/null
+        pkg_install dnf install -y curl wget git python3 python3-pip &>/dev/null || \
+        pkg_install yum install -y curl wget git python3 python3-pip &>/dev/null
         msg_ok "Installed dependencies"
         install_deps
         ;;
     opensuse*|sles)
         msg_ok "Detected $DISTRO"
         msg_info "Installing dependencies"
-        zypper install -y curl wget git python3 python3-pip &>/dev/null
+        pkg_install zypper install -y curl wget git python3 python3-pip &>/dev/null
         msg_ok "Installed dependencies"
         install_deps
         ;;
     alpine)
         msg_ok "Detected $DISTRO"
         msg_info "Installing dependencies"
-        apk add --no-cache curl wget git python3 py3-pip bash &>/dev/null
+        pkg_install apk add --no-cache curl wget git python3 py3-pip bash &>/dev/null
         msg_ok "Installed dependencies"
         install_deps
         ;;
     void)
         msg_ok "Detected $DISTRO"
         msg_info "Installing dependencies"
-        xbps-install -Sy curl wget git python3 python3-pip &>/dev/null
+        pkg_install xbps-install -Sy curl wget git python3 python3-pip &>/dev/null
         msg_ok "Installed dependencies"
         install_deps
         ;;
     gentoo)
         msg_ok "Detected $DISTRO"
         msg_info "Installing dependencies"
-        emerge --ask=n net-misc/curl net-misc/wget dev-vcs/git dev-lang/python &>/dev/null
+        pkg_install emerge --ask=n net-misc/curl net-misc/wget dev-vcs/git dev-lang/python &>/dev/null
         msg_ok "Installed dependencies"
         install_deps
         ;;
@@ -170,16 +192,16 @@ case $DISTRO in
     *)
         msg_ok "Unknown distro — detecting package manager"
         if command -v apt-get &>/dev/null; then
-            apt-get update -y &>/dev/null
-            apt-get install -y curl wget git python3 python3-pip &>/dev/null
+            pkg_install apt-get update -y &>/dev/null
+            pkg_install apt-get install -y curl wget git python3 python3-pip &>/dev/null
         elif command -v pacman &>/dev/null; then
-            pacman -Sy --noconfirm --needed curl wget git python
+            pkg_install pacman -Sy --noconfirm --needed curl wget git python
         elif command -v dnf &>/dev/null; then
-            dnf install -y curl wget git python3 python3-pip &>/dev/null
+            pkg_install dnf install -y curl wget git python3 python3-pip &>/dev/null
         elif command -v zypper &>/dev/null; then
-            zypper install -y curl wget git python3 python3-pip &>/dev/null
+            pkg_install zypper install -y curl wget git python3 python3-pip &>/dev/null
         elif command -v apk &>/dev/null; then
-            apk add --no-cache curl wget git python3 py3-pip &>/dev/null
+            pkg_install apk add --no-cache curl wget git python3 py3-pip &>/dev/null
         else
             msg_err "No supported package manager found"
         fi
@@ -189,9 +211,10 @@ esac
 
 IP=$(hostname -I 2>/dev/null | awk '{print $1}')
 echo ""
-if has_systemd && systemctl is-active runbook &>/dev/null 2>&1; then
+if $IS_ROOT && has_systemd && systemctl is-active runbook &>/dev/null 2>&1; then
     echo -e "${GREEN}  Runbook is running at http://$IP:7681${NC}"
 else
     echo -e "${GREEN}  Runbook installed! Run with: ttyd --writable Runbook${NC}"
+    echo -e "${YELLOW}  Note: restart your terminal or run: source ~/.bashrc${NC}"
 fi
 echo ""
