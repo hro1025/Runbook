@@ -34,7 +34,7 @@ LATEST=$(curl -fsSL "https://api.github.com/repos/$REPO/releases/latest" | grep 
 LATEST=${LATEST:-v1.0.0}
 
 has_systemd() {
-    command -v systemctl &>/dev/null && pidof systemd &>/dev/null
+    command -v systemctl &>/dev/null && pidof systemd 
 }
 
 install_dotnet() {
