@@ -1,6 +1,4 @@
 #!/bin/bash
-set -e
-
 # Colors
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -109,14 +107,13 @@ case $DISTRO in
         msg_ok "Installed dependencies"
         install_deps
         ;;
-    arch|manjaro|endeavouros|garuda|artix)
-        msg_ok "Detected $DISTRO"
-        msg_info "Installing dependencies"
-        pacman-key --init &>/dev/null || true
-        pacman-key --populate &>/dev/null || true
-        pacman -Sy --noconfirm --needed curl wget git python &>/dev/null
-        msg_ok "Installed dependencies"
-        install_deps
+arch|manjaro|endeavouros|garuda|artix)
+    msg_ok "Detected $DISTRO"
+    msg_info "Installing dependencies"
+    pacman -Sy --noconfirm --needed curl wget git python 2>&1 | tail -1
+    msg_ok "Installed dependencies"
+    install_deps
+    ;;
         ;;
     fedora)
         msg_ok "Detected $DISTRO"
