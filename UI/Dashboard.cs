@@ -369,6 +369,16 @@ public class Dashboard
                         },
                         cts.Token
                     );
+                    if (
+                        ListView.SelectedItem >= 0
+                        && ListView.SelectedItem < scripts.Count
+                        && scripts[ListView.SelectedItem].Path == selected.Path
+                        && ScriptOutputs.TryGetValue(selected.Path!, out var lastOutput)
+                    )
+                    {
+                        Output.Text = lastOutput;
+                        Output.MoveEnd();
+                    }
                 }
                 catch (OperationCanceledException)
                 {
