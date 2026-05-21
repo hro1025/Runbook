@@ -227,54 +227,79 @@ public class Dashboard
         if (scripts.Count > 0)
             ListView.SelectedItem = 0;
 
-        // ── Refresh running status and reattach tails on startup ─────
+        // ── Refresh running status on startup ────────────────────────
         Application.Invoke(() => RefreshDisplayNames(scripts, null));
 
+        // ── Reattach tails for scripts already running ───────────────
         foreach (var script in scripts)
         {
-            if (executor.IsRunning(script))
-            {
-                ScriptOutputs[script.Path!] = "";
-                var cts = new CancellationTokenSource();
-                cancellations[script.Path!] = cts;
-                var capturedScript = script;
+            if (!executor.IsRunning(script))
+                continue;
 
-                _ = Task.Run(async () =>
+            ScriptOutputs[script.Path!] = "";
+            var cts = new CancellationTokenSource();
+            cancellations[script.Path!] = cts;
+            var capturedScript = script;
+
+            // Show progress bar if this script is selected
+            if (scripts.Count > 0 && scripts[0].Path == capturedScript.Path)
+                Application.Invoke(() => ProgressBar.Visible = true);
+
+            var reattachTimer = Application.AddTimeout(
+                TimeSpan.FromMilliseconds(30),
+                () =>
                 {
-                    try
-                    {
-                        await executor.Execute(
-                            capturedScript,
-                            line =>
+                    ProgressBar.Pulse();
+                    return true;
+                }
+            );
+
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    await executor.Execute(
+                        capturedScript,
+                        line =>
+                        {
+                            Application.Invoke(() =>
                             {
-                                Application.Invoke(() =>
+                                ScriptOutputs[capturedScript.Path!] += line + "\n";
+                                if (
+                                    ListView.SelectedItem >= 0
+                                    && ListView.SelectedItem < scripts.Count
+                                    && scripts[ListView.SelectedItem].Path == capturedScript.Path
+                                )
                                 {
-                                    ScriptOutputs[capturedScript.Path!] += line + "\n";
-                                    if (
-                                        ListView.SelectedItem >= 0
-                                        && ListView.SelectedItem < scripts.Count
-                                        && scripts[ListView.SelectedItem].Path
-                                            == capturedScript.Path
-                                    )
-                                    {
-                                        Output.Text = ScriptOutputs[capturedScript.Path!];
-                                        Output.MoveEnd();
-                                    }
-                                });
-                            },
-                            cts.Token,
-                            reattach: true
-                        );
-                    }
-                    catch { }
-                    finally
+                                    Output.Text = ScriptOutputs[capturedScript.Path!];
+                                    Output.MoveEnd();
+                                }
+                            });
+                        },
+                        cts.Token,
+                        reattach: true
+                    );
+                }
+                catch { }
+                finally
+                {
+                    Application.RemoveTimeout(reattachTimer!);
+                    runningScripts.Remove(capturedScript.Path!);
+                    cancellations.Remove(capturedScript.Path!);
+                    Application.Invoke(() =>
                     {
-                        runningScripts.Remove(capturedScript.Path!);
-                        cancellations.Remove(capturedScript.Path!);
-                        Application.Invoke(() => RefreshDisplayNames(scripts, null));
-                    }
-                });
-            }
+                        RefreshDisplayNames(scripts, null);
+                        if (
+                            ListView.SelectedItem >= 0
+                            && ListView.SelectedItem < scripts.Count
+                            && scripts[ListView.SelectedItem].Path == capturedScript.Path
+                        )
+                        {
+                            ProgressBar.Visible = false;
+                        }
+                    });
+                }
+            });
         }
 
         ListView.OpenSelectedItem += async (sender, e) =>
