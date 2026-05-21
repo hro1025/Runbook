@@ -21,6 +21,15 @@ public class Dashboard
     private readonly HashSet<string> runningScripts = [];
     private readonly Dictionary<string, CancellationTokenSource> cancellations = [];
 
+    private static string GetLogPath(Script script) =>
+        Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
+            ".scripts",
+            "runbook",
+            "logs",
+            $"{Path.GetFileName(script.Path)}.log"
+        );
+
     public void RefreshDisplayNames(List<Script> scripts, string? editingPath)
     {
         var currentIndex = ListView.SelectedItem;
@@ -236,14 +245,28 @@ public class Dashboard
             if (!executor.IsRunning(script))
                 continue;
 
-            ScriptOutputs[script.Path!] = "";
+            // Load existing log output instead of clearing it
+            var logPath = GetLogPath(script);
+            ScriptOutputs[script.Path!] = File.Exists(logPath) ? File.ReadAllText(logPath) : "";
+
             var cts = new CancellationTokenSource();
             cancellations[script.Path!] = cts;
             var capturedScript = script;
 
-            // Show progress bar if this script is selected
-            if (scripts.Count > 0 && scripts[0].Path == capturedScript.Path)
-                Application.Invoke(() => ProgressBar.Visible = true);
+            // Show progress bar if this script is currently selected
+            if (
+                ListView.SelectedItem >= 0
+                && ListView.SelectedItem < scripts.Count
+                && scripts[ListView.SelectedItem].Path == capturedScript.Path
+            )
+            {
+                Application.Invoke(() =>
+                {
+                    Output.Text = ScriptOutputs[capturedScript.Path!];
+                    Output.MoveEnd();
+                    ProgressBar.Visible = true;
+                });
+            }
 
             var reattachTimer = Application.AddTimeout(
                 TimeSpan.FromMilliseconds(30),
@@ -284,6 +307,7 @@ public class Dashboard
                 finally
                 {
                     Application.RemoveTimeout(reattachTimer!);
+                    ScriptStatus[capturedScript.Path!] = "stopped";
                     runningScripts.Remove(capturedScript.Path!);
                     cancellations.Remove(capturedScript.Path!);
                     Application.Invoke(() =>
@@ -296,6 +320,10 @@ public class Dashboard
                         )
                         {
                             ProgressBar.Visible = false;
+                            Output.Text = ScriptOutputs.TryGetValue(capturedScript.Path!, out var o)
+                                ? o
+                                : "";
+                            Output.MoveEnd();
                         }
                     });
                 }
@@ -317,9 +345,24 @@ public class Dashboard
                     executor.Kill(selected);
                     if (cancellations.TryGetValue(selected.Path!, out var existingCts))
                         existingCts.Cancel();
+                    ScriptStatus[selected.Path!] = "stopped";
                     runningScripts.Remove(selected.Path!);
                     cancellations.Remove(selected.Path!);
-                    Application.Invoke(() => RefreshDisplayNames(scripts, null));
+                    Application.Invoke(() =>
+                    {
+                        RefreshDisplayNames(scripts, null);
+                        if (
+                            ListView.SelectedItem >= 0
+                            && ListView.SelectedItem < scripts.Count
+                            && scripts[ListView.SelectedItem].Path == selected.Path
+                            && ScriptOutputs.TryGetValue(selected.Path!, out var lastOutput)
+                        )
+                        {
+                            Output.Text = lastOutput;
+                            Output.MoveEnd();
+                            ProgressBar.Visible = false;
+                        }
+                    });
                 }
                 return;
             }
