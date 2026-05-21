@@ -317,18 +317,14 @@ esac
 
 # ── Done ───────────────────────────────────────────────────────
 IP=$(hostname -I 2>/dev/null | awk '{print $1}')
-echo ""
 msg_section "Done"
 if $IS_ROOT && has_systemd && systemctl is-active runbook &>/dev/null 2>&1; then
     echo -e "${GREEN}  ✓ Runbook is running at http://$IP:7681${NC}"
-    echo -e "${CYAN}  ↷ Or run directly in terminal: Runbook${NC}"
 elif ! $IS_ROOT && has_systemd && systemctl --user is-active runbook &>/dev/null 2>&1; then
     echo -e "${GREEN}  ✓ Runbook is running at http://localhost:7681${NC}"
-    echo -e "${CYAN}  ↷ Or run directly in terminal: Runbook${NC}"
 else
-    echo -e "${GREEN}  ✓ Runbook installed at $BIN_DIR/Runbook${NC}"
     echo -e "${YELLOW}  ⟳ Run in browser: ttyd --writable -R Runbook${NC}"
-    echo -e "${CYAN}  ↷ Run in terminal: Runbook${NC}"
     echo -e "${YELLOW}  ⟳ Restart terminal or: source ~/.bashrc${NC}"
 fi
+echo -e "${CYAN}  ↷ Run in terminal: Runbook${NC}"
 echo ""
