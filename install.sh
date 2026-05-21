@@ -63,8 +63,9 @@ install_runbook() {
 }
 
 install_service() {
-    msg_info "Creating systemd service"
-    cat > /etc/systemd/system/runbook.service << EOF
+    if command -v systemctl &>/dev/null && systemctl is-system-running &>/dev/null 2>&1; then
+        msg_info "Creating systemd service"
+        cat > /etc/systemd/system/runbook.service << EOF
 [Unit]
 Description=Runbook TUI Script Manager
 After=network.target
@@ -79,9 +80,12 @@ RestartSec=3
 [Install]
 WantedBy=multi-user.target
 EOF
-    systemctl daemon-reload
-    systemctl enable -q --now runbook
-    msg_ok "Created service"
+        systemctl daemon-reload
+        systemctl enable -q --now runbook
+        msg_ok "Created service"
+    else
+        msg_ok "Skipping service (no systemd) — run manually with: ttyd --writable Runbook"
+    fi
 }
 
 install_deps() {
@@ -158,5 +162,9 @@ esac
 
 IP=$(hostname -I | awk '{print $1}')
 echo ""
-echo -e "${GREEN}  Runbook is running at http://$IP:7681${NC}"
+if command -v systemctl &>/dev/null && systemctl is-active runbook &>/dev/null 2>&1; then
+    echo -e "${GREEN}  Runbook is running at http://$IP:7681${NC}"
+else
+    echo -e "${GREEN}  Runbook installed! Run with: ttyd --writable Runbook${NC}"
+fi
 echo ""
