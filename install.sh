@@ -290,8 +290,6 @@ if $INSTALL_TTYD; then
         echo -e "${YELLOW}  ⟳ Run in browser: ttyd --writable Runbook${NC}"
     fi
 fi
+export PATH="$PATH:$BIN_DIR"
 echo -e "${GREEN}  ✓ Run in terminal: Runbook${NC}"
-if ! $INSTALL_TTYD; then
-    echo -e "${YELLOW}  ⟳ Restart terminal or: source ~/.bashrc${NC}"
-fi
 echo ""
