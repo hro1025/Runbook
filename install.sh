@@ -146,11 +146,8 @@ install_ttyd() {
     else
         msg_info "Installing ttyd"
         if has_systemd; then
-            if $IS_ROOT; then
-                systemctl stop runbook 2>/dev/null || true
-            else
-                systemctl --user stop runbook 2>/dev/null || true
-            fi
+            systemctl stop runbook 2>/dev/null || true
+            systemctl --user stop runbook 2>/dev/null || true
             sleep 1
         fi
         curl -fsSL https://github.com/tsl0922/ttyd/releases/latest/download/ttyd.x86_64 -o "$BIN_DIR/ttyd"
@@ -161,6 +158,12 @@ install_ttyd() {
 
 install_runbook() {
     msg_section "Runbook"
+    # Stop service before overwriting binary
+    if has_systemd; then
+        systemctl stop runbook 2>/dev/null || true
+        systemctl --user stop runbook 2>/dev/null || true
+        sleep 1
+    fi
     if [ -f "$BIN_DIR/Runbook" ]; then
         msg_info "Updating Runbook to $LATEST"
     else
@@ -169,6 +172,7 @@ install_runbook() {
     curl -L -o "$BIN_DIR/Runbook" "https://github.com/$REPO/releases/download/$LATEST/Runbook" || msg_err "Failed to download Runbook"
     chmod +x "$BIN_DIR/Runbook"
     msg_ok "Installed Runbook $LATEST"
+    msg_ok "Run directly in terminal with: Runbook"
 }
 
 install_service() {
@@ -317,11 +321,14 @@ echo ""
 msg_section "Done"
 if $IS_ROOT && has_systemd && systemctl is-active runbook &>/dev/null 2>&1; then
     echo -e "${GREEN}  ✓ Runbook is running at http://$IP:7681${NC}"
+    echo -e "${CYAN}  ↷ Or run directly in terminal: Runbook${NC}"
 elif ! $IS_ROOT && has_systemd && systemctl --user is-active runbook &>/dev/null 2>&1; then
     echo -e "${GREEN}  ✓ Runbook is running at http://localhost:7681${NC}"
+    echo -e "${CYAN}  ↷ Or run directly in terminal: Runbook${NC}"
 else
     echo -e "${GREEN}  ✓ Runbook installed at $BIN_DIR/Runbook${NC}"
-    echo -e "${YELLOW}  ⟳ Run with: ttyd --writable -R Runbook${NC}"
+    echo -e "${YELLOW}  ⟳ Run in browser: ttyd --writable -R Runbook${NC}"
+    echo -e "${CYAN}  ↷ Run in terminal: Runbook${NC}"
     echo -e "${YELLOW}  ⟳ Restart terminal or: source ~/.bashrc${NC}"
 fi
 echo ""
